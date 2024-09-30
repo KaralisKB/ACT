@@ -5,7 +5,7 @@ FROM node:16
 
 WORKDIR /app
 
-COPY Backend /app/
+COPY Backend/node/ /app/
 
 RUN npm install
 
