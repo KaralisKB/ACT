@@ -7,9 +7,6 @@ dotenv.config()
 
 // Firebase Admin initialisation 
 
-console.log("FIREBASE_CREDENTIALS:", process.env.FIREBASE_CREDENTIALS);
-
-
 const firebaseCredentials = JSON.parse(process.env.FIREBASE_CREDENTIALS)
 admin.initializeApp({
     credential: admin.credential.cert(firebaseCredentials)
