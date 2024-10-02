@@ -1,17 +1,10 @@
 const express = require('express');
-const admin = require('firebase-admin');
+const admin = require('./firebase');
 const dotenv = require('dotenv');
 const routes = require("./routes");
 
 // load the enironment stuff
 dotenv.config()
-
-// Firebase Admin initialisation 
-
-const firebaseCredentials = JSON.parse(process.env.FIREBASE_CREDENTIALS)
-admin.initializeApp({
-    credential: admin.credential.cert(firebaseCredentials)
-})
 
 const db = admin.firestore();
 
