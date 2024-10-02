@@ -4,12 +4,14 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import android.widget.Button
+import com.google.firebase.FirebaseApp
 
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
 
         // Button to navigate to LoginActivity
         val loginButton: Button = findViewById(R.id.loginButton)
@@ -18,7 +20,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // Initialize the registerButton
+        // Button to navigate to RegisterActivity
         val registerButton: Button = findViewById(R.id.registerButton)
         registerButton.setOnClickListener {
             val intent = Intent(this, RegisterActivity::class.java)
