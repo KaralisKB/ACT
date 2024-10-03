@@ -46,6 +46,7 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.4.0")
 
     implementation("com.google.firebase:firebase-auth:21.0.3")
+    implementation("com.google.android.gms:play-services-auth:20.2.0")
     implementation("com.google.firebase:firebase-firestore:24.0.2")
 
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
