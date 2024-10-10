@@ -29,9 +29,11 @@
         <!-- RegisterActivity -->
         <activity android:name=".RegisterActivity" />
 
-        <!-- AuthenticatedHomeActivity -->
         <activity android:name=".AuthenticatedHomeActivity" />
-
+        <activity android:name=".PortfolioActivity" />
+        <activity android:name=".MarketActivity" />
+        <activity android:name=".TradeActivity" />
+        <activity android:name=".NotificationsActivity" />
     </application>
 
 

@@ -1,75 +1,6 @@
-//package com.example.act
-//
-//import android.os.Bundle
-//import android.widget.Button
-//import android.widget.EditText
-//import android.widget.Toast
-//import androidx.appcompat.app.AppCompatActivity
-//import com.example.act.api.AuthApiService
-//import com.example.act.api.AuthResponse
-//import com.example.act.api.RegisterRequest
-//import com.example.act.api.RetrofitClient
-//import retrofit2.Call
-//import retrofit2.Callback
-//import retrofit2.Response
-//
-//class RegisterActivity : AppCompatActivity() {
-//
-//    private lateinit var apiService: AuthApiService
-//
-//    override fun onCreate(savedInstanceState: Bundle?) {
-//        super.onCreate(savedInstanceState)
-//        setContentView(R.layout.activity_register)
-//
-//        // Initialize Retrofit and API service
-//        apiService = RetrofitClient.instance.create(AuthApiService::class.java)
-//
-//        // Use the correct IDs from the XML file
-//        val emailField: EditText = findViewById(R.id.registerEmailEditText)
-//        val passwordField: EditText = findViewById(R.id.registerPasswordEditText)
-//        val registerButton: Button = findViewById(R.id.registerButton)
-//
-//        registerButton.setOnClickListener {
-//            val email = emailField.text.toString()
-//            val password = passwordField.text.toString()
-//
-//            if (email.isNotEmpty() && password.isNotEmpty()) {
-//                registerUser(email, password)
-//            } else {
-//                Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
-//            }
-//        }
-//    }
-//
-//    private fun registerUser(email: String, password: String) {
-//        val request = RegisterRequest(email, password)
-//
-//        apiService.registerUser(request).enqueue(object : Callback<AuthResponse> {
-//            override fun onResponse(call: Call<AuthResponse>, response: Response<AuthResponse>) {
-//                if (response.isSuccessful) {
-//                    val authResponse = response.body()
-//                    if (authResponse != null && authResponse.success) {
-//                        Toast.makeText(this@RegisterActivity, "Registration successful!", Toast.LENGTH_SHORT).show()
-//                        finish() // Go back to the login screen
-//                    } else {
-//                        val errorMessage = authResponse?.message ?: "Unknown error occurred"
-//                        Toast.makeText(this@RegisterActivity, "Registration failed: $errorMessage", Toast.LENGTH_SHORT).show()
-//                    }
-//                } else {
-//                    Toast.makeText(this@RegisterActivity, "Registration failed: ${response.errorBody()?.string()}", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//
-//
-//            override fun onFailure(call: Call<AuthResponse>, t: Throwable) {
-//                Toast.makeText(this@RegisterActivity, "Registration failed: ${t.message}", Toast.LENGTH_SHORT).show()
-//            }
-//        })
-//    }
-//}
-
 package com.example.act
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
@@ -126,6 +57,12 @@ class RegisterActivity : AppCompatActivity() {
                     if (userId != null) {
                         db.collection("users").document(userId).set(user)
                             .addOnSuccessListener {
+                                // Save the username to SharedPreferences
+                                val sharedPreferences = getSharedPreferences("UserDetails", MODE_PRIVATE)
+                                val editor = sharedPreferences.edit()
+                                editor.putString("username", userName)  // Saving the entered username
+                                editor.apply()
+
                                 Toast.makeText(this, "Registration successful!", Toast.LENGTH_SHORT).show()
                                 finish() // Go back to the login screen
                             }
@@ -139,5 +76,12 @@ class RegisterActivity : AppCompatActivity() {
                 }
             }
     }
-}
 
+    // Save username to SharedPreferences
+    private fun saveUsernameToSharedPreferences(userName: String) {
+        val sharedPreferences = getSharedPreferences("UserDetails", MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.putString("username", userName)  // Save the username
+        editor.apply()
+    }
+}

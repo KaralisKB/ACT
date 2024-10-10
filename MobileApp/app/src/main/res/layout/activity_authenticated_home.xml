@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Main Content with Navigation and Bottom Navigation -->
+    <!-- Main content area -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -16,34 +16,209 @@
             android:id="@+id/welcomeMessage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Welcome to the Authenticated Home!"
+            android:text="Welcome, User"
             android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
             app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <!-- Role -->
+        <TextView
+            android:id="@+id/userRoleTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Fund Administrator"
+            android:textSize="14sp"
+            app:layout_constraintTop_toBottomOf="@id/welcomeMessage"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="8dp"/>
+
+        <!-- Current Balance -->
+        <TextView
+            android:id="@+id/currentBalanceTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Current Balance: $$$"
+            android:textSize="16sp"
+            app:layout_constraintTop_toBottomOf="@id/userRoleTextView"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="8dp"/>
+
+        <!-- ScrollView to Handle Tables -->
+        <ScrollView
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintTop_toBottomOf="@id/currentBalanceTextView"
             app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="16dp">
+
+            <!-- Container for Tables -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Section Header -->
+                <TextView
+                    android:id="@+id/sharesHeaderTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="User Current Shares"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="8dp"/>
+
+                <!-- Bought Shares Table -->
+                <TextView
+                    android:id="@+id/boughtSharesHeader"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Bought Shares"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/holo_blue_light"
+                    android:layout_gravity="start"
+                    android:layout_marginTop="8dp"/>
+
+                <!-- Table Layout for Bought Shares -->
+                <TableLayout
+                    android:id="@+id/boughtSharesTable"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:stretchColumns="1"
+                    android:divider="@drawable/table_border"
+                    android:showDividers="middle"
+                    android:padding="8dp">
+
+                    <!-- Table Headers -->
+                    <TableRow
+                        android:background="@drawable/table_border">
+                        <TextView
+                            android:text="Asset"
+                            android:layout_weight="1"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:padding="8dp"/>
+                        <TextView
+                            android:text="Quantity"
+                            android:layout_weight="1"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:padding="8dp"/>
+                        <TextView
+                            android:text="Purchase Price"
+                            android:layout_weight="1"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:padding="8dp"/>
+                        <TextView
+                            android:text="Current Price"
+                            android:layout_weight="1"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:padding="8dp"/>
+                        <TextView
+                            android:text="P/L"
+                            android:layout_weight="1"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:padding="8dp"/>
+                    </TableRow>
+
+                    <!-- Data Rows will be populated dynamically -->
+                </TableLayout>
+
+                <!-- Sold Shares Table -->
+                <TextView
+                    android:id="@+id/soldSharesHeader"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sold Shares"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/holo_red_dark"
+                    android:layout_gravity="start"
+                    android:layout_marginTop="16dp"/>
+
+                <!-- Table Layout for Sold Shares -->
+                <TableLayout
+                    android:id="@+id/soldSharesTable"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:stretchColumns="1"
+                    android:divider="@drawable/table_border"
+                    android:showDividers="middle"
+                    android:padding="8dp">
+
+                    <!-- Table Headers -->
+                    <TableRow
+                        android:background="@drawable/table_border">
+                        <TextView
+                            android:text="Asset"
+                            android:layout_weight="1"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:padding="8dp"/>
+                        <TextView
+                            android:text="Quantity"
+                            android:layout_weight="1"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:padding="8dp"/>
+                        <TextView
+                            android:text="Sold Price"
+                            android:layout_weight="1"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:padding="8dp"/>
+                        <TextView
+                            android:text="Current Price"
+                            android:layout_weight="1"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:padding="8dp"/>
+                        <TextView
+                            android:text="P/L"
+                            android:layout_weight="1"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:padding="8dp"/>
+                    </TableRow>
+
+                    <!-- Data Rows will be populated dynamically -->
+                </TableLayout>
+            </LinearLayout>
+        </ScrollView>
 
         <!-- Bottom Navigation -->
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/bottomNavigation"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:menu="@menu/bottom_nav_menu"
             app:itemIconTint="@color/bottom_nav_color_selector"
             app:itemTextColor="@color/bottom_nav_color_selector"
-            app:labelVisibilityMode="labeled"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:labelVisibilityMode="labeled" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- Side Navigation -->
+    <!-- Side Navigation (Drawer) -->
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/navigationView"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="start"
         app:headerLayout="@layout/nav_header"
-        app:menu="@menu/side_nav_menu" />
+        app:menu="@menu/side_nav_menu"/>
 
 </androidx.drawerlayout.widget.DrawerLayout>

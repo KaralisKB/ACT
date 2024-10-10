@@ -1,9 +1,16 @@
+// NavigationHandler remains the same as you posted:
 package com.example.act.utils
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.drawerlayout.widget.DrawerLayout
+import com.example.act.AuthenticatedHomeActivity
+import com.example.act.MarketActivity
+import com.example.act.NotificationsActivity
+import com.example.act.PortfolioActivity
 import com.example.act.R
+import com.example.act.TradeActivity
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 object NavigationHandler {
@@ -27,23 +34,28 @@ object NavigationHandler {
         bottomNavigationView.setOnNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_home -> {
-                    // Handle home navigation
+                    val intent = Intent(activity, AuthenticatedHomeActivity::class.java)
+                    activity.startActivity(intent)
                     true
                 }
                 R.id.nav_portfolio -> {
-                    // Handle portfolio navigation
+                    val intent = Intent(activity, PortfolioActivity::class.java)
+                    activity.startActivity(intent)
                     true
                 }
                 R.id.nav_market -> {
-                    // Handle market navigation
+                    val intent = Intent(activity, MarketActivity::class.java)
+                    activity.startActivity(intent)
                     true
                 }
                 R.id.nav_trade -> {
-                    // Handle trade navigation
+                    val intent = Intent(activity, TradeActivity::class.java)
+                    activity.startActivity(intent)
                     true
                 }
                 R.id.nav_notifications -> {
-                    // Handle notifications navigation
+                    val intent = Intent(activity, NotificationsActivity::class.java)
+                    activity.startActivity(intent)
                     true
                 }
                 else -> false
