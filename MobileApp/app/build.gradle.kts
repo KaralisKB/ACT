@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.compose.ui.tooling)
     implementation(libs.activity.compose)
     implementation(libs.navigation.compose)
+    implementation("com.google.android.material:material:1.12.0")
 }
 
 // Add the following line at the bottom of the file to apply the Google Services plugin
