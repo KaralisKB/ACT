@@ -75,7 +75,7 @@ router.post('/portfolios', async (res, req) => {
 
         if (clientID) {
             portfolioData.clientID = clientID
-        }
+        } 
         
 
         const newPortfolioAdd = portfolioColletion.doc();
@@ -84,6 +84,26 @@ router.post('/portfolios', async (res, req) => {
         res.status(201).json({ message: 'Portfolio created', portfolioID: newPortfolioAdd.id});
     }catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+router.get('/stocks', async (req, res) => {
+    try {
+        const stockRef = db.collection('stocks');
+        const snapshot = await stockRef.get();
+        if(snapshot.empty) {
+            return res.status(404).json({ message: "No Stocks Found"});
+        }
+
+        const stocks = [];
+        snapshot.forEach(doc => {
+            stocks.push({ id: doc.id, ...doc.data()});
+        });
+
+        res.status(200).json(stocks);
+    }catch (error) {
+        console.error('Error retrieving stocks:', error);
+        res.status(500).json({ message: 'Internal Server Error'});
     }
 });
 
