@@ -14,7 +14,7 @@ app.use(express.json());
 // access routes from routes.js
 app.use('/api', routes);
 
-
 app.listen(3000, () => {
     console.log("Server is running on port 3000."); 
 })
+

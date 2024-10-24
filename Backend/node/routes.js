@@ -4,6 +4,9 @@ const db = admin.firestore();
 
 const router = express.Router();
 
+// Firestore refs
+const portfolioColletion = db.collection('portfolio');
+
 // Registration
 router.post('/auth/register', async (req, res) => {
     const {email, password, userName, role} = req.body;
@@ -56,6 +59,31 @@ router.post('/auth/login', async (res, req) => {
 
     } catch (error) {
         res.status(401).send({ error: "Unauthorized"});
+    }
+});
+
+// Create a new portfolio 
+router.post('/portfolios', async (res, req) => {
+    const { clientID, value } = req.body;
+
+    try {
+        const portfolioData = {
+            assets: [],
+            value,
+            lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+        };
+
+        if (clientID) {
+            portfolioData.clientID = clientID
+        }
+        
+
+        const newPortfolioAdd = portfolioColletion.doc();
+        await newPortfolioAdd.set(portfolioData);
+
+        res.status(201).json({ message: 'Portfolio created', portfolioID: newPortfolioAdd.id});
+    }catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
