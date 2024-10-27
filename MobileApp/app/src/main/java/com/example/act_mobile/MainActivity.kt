@@ -67,7 +67,8 @@ class MainActivity : ComponentActivity() {
                             onSupportClick = { currentScreen = "support" }, // support screen
                             onFeedbackClick = { currentScreen = "feedback" }, // feedback screen
                             onNewsClick = { currentScreen = "news" },
-                            onSettingsClick = { currentScreen = "settings" } // settings screen
+                            onSettingsClick = { currentScreen = "settings" }, // settings screen
+                            onAddFundsClick = { /*TO DO */ }
                         )
                     }
                 }
@@ -123,12 +124,15 @@ fun HomeWithDrawer(
     onSupportClick: () -> Unit,
     onFeedbackClick: () -> Unit,
     onNewsClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onAddFundsClick: () -> Unit
 
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var username by remember { mutableStateOf("Loading...") }
+    var currentBalance by remember { mutableStateOf("1000") } // example
+
 
     // Firebase Firestore instance
     val firestore = FirebaseFirestore.getInstance()
@@ -157,7 +161,8 @@ fun HomeWithDrawer(
                 onSupportClick = onSupportClick,
                 onFeedbackClick = onFeedbackClick,
                 onNewsClick = onNewsClick,
-                onSettingsClick = onSettingsClick
+                onSettingsClick = onSettingsClick,
+                onAddFundsClick = onAddFundsClick
             )
         }
     ) {
@@ -178,7 +183,12 @@ fun HomeWithDrawer(
                 )
             }
         ) { paddingValues ->
-            MainAppScreen(modifier = Modifier.padding(paddingValues))
+            MainAppScreen(
+                modifier = Modifier.padding(paddingValues),
+                username = username,
+                currentBalance = currentBalance,
+                onAddFundsClick = onAddFundsClick
+            )
         }
     }
 }

@@ -31,7 +31,9 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a0d17e19-3efc-486d-a40f-6dc7ab7c2756" name="Changes" comment="test" />
+    <list default="true" id="a0d17e19-3efc-486d-a40f-6dc7ab7c2756" name="Changes" comment="test">
+      <change beforePath="$PROJECT_DIR$/MobileApp/app/google-services.json" beforeDir="false" afterPath="$PROJECT_DIR$/MobileApp/app/google-services.json" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -40,7 +42,6 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[DeviceId(pluginId=LocalEmulator, isTemplate=false, identifier=path=C:\Users\isiha\.android\avd\Medium_Phone_API_35.avd)]" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
@@ -102,12 +103,13 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.cidr.known.project.marker": "true",
     "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "android.gradle.sync.needed": "true",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
     "com.google.services.firebase.aqiPopupShown": "true",
     "git-widget-placeholder": "dev",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/isiha/OneDrive - mycit.ie/Y3S1/GP/ACT/Application",
+    "last_opened_file_path": "C:/Users/isiha/OneDrive - mycit.ie/Y3S1/GP/ACT/MobileApp",
     "settings.editor.selected.configurable": "preferences.externalResources"
   },
   "keyToStringList": {
@@ -125,7 +127,6 @@
   </component>
   <component name="RunManager">
     <configuration name="app" type="AndroidRunConfigurationType" factoryName="Android App" activateToolWindowBeforeRun="false">
-      <module name="ACT.app.main" />
       <option name="DEPLOY" value="true" />
       <option name="DEPLOY_APK_FROM_BUNDLE" value="false" />
       <option name="DEPLOY_AS_INSTANT" value="false" />
