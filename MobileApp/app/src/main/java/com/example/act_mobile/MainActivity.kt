@@ -53,7 +53,6 @@ class MainActivity : ComponentActivity() {
                 val account = task.getResult(ApiException::class.java)
                 handleGoogleSignInResult(account)
             } catch (e: ApiException) {
-                // Handle the error
                 if (e.statusCode == GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
                     Log.d("MainActivity", "Google Sign-In was canceled by the user.")
                 } else {
