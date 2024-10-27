@@ -1,20 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.act">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.act_mobile">
 
-    <!-- Permissions -->
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
+
+    <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:name=".MyApp"
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ACT">
+        android:theme="@style/Theme.Act_mobile"
+        tools:targetApi="31">
 
-        <!-- MainActivity as launcher -->
         <activity android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
@@ -22,19 +29,5 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!-- LoginActivity -->
-        <activity android:name=".LoginActivity" />
-
-        <!-- RegisterActivity -->
-        <activity android:name=".RegisterActivity" />
-
-        <activity android:name=".ui.screens.AuthenticatedHomeActivity" />
-        <activity android:name=".ui.screens.PortfolioActivity" />
-        <activity android:name=".ui.screens.MarketActivity" />
-        <activity android:name=".ui.screens.TradeActivity" />
-        <activity android:name=".ui.screens.NotificationsActivity" />
     </application>
-
-
 </manifest>

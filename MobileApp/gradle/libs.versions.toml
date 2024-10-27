@@ -42,6 +42,7 @@ androidx-compose-ui-tooling = "1.7.3"
 androidx-activity-compose = "1.9.2"
 androidx-navigation-compose = "2.8.2"
 material3Android = "1.3.0"
+mpandroidchart = "v3.1.0"
 storage = "1.5.0"
 
 [libraries]
@@ -56,6 +57,7 @@ compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "androi
 compose-material = { group = "androidx.compose.material", name = "material", version.ref = "androidx-compose-material" }
 compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "androidx-compose-ui-tooling" }
 activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "androidx-activity-compose" }
+mpandroidchart = { module = "com.github.PhilJay:MPAndroidChart", version.ref = "mpandroidchart" }
 navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "androidx-navigation-compose" }
 androidx-material3-android = { group = "androidx.compose.material3", name = "material3-android", version.ref = "material3Android" }
 androidx-storage = { group = "androidx.test.services", name = "storage", version.ref = "storage" }
@@ -65,4 +67,3 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 google-services = { id = "com.google.gms.google-services", version = "4.3.14" }
-
