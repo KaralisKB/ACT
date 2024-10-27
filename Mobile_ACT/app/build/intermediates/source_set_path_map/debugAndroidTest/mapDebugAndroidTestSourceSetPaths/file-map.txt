@@ -1,0 +1,6 @@
+com.example.mobile_app.test.app-annotation-experimental-1.3.0-0 C:\Users\isiha\.gradle\caches\transforms-4\87db82df2441b8177618e25f3836d940\transformed\annotation-experimental-1.3.0\res
+com.example.mobile_app.test.app-core-1.5.0-1 C:\Users\isiha\.gradle\caches\transforms-4\a7b0dbc651e957bb5202b36a2d4fbf17\transformed\core-1.5.0\res
+com.example.mobile_app.test.app-androidTest-2 C:\Users\isiha\OneDrive - mycit.ie\Y3S1\GP\ACT\Mobile_ACT\app\build\generated\res\resValues\androidTest\debug
+com.example.mobile_app.test.app-mergeDebugAndroidTestResources-3 C:\Users\isiha\OneDrive - mycit.ie\Y3S1\GP\ACT\Mobile_ACT\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
+com.example.mobile_app.test.app-mergeDebugAndroidTestResources-4 C:\Users\isiha\OneDrive - mycit.ie\Y3S1\GP\ACT\Mobile_ACT\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
+com.example.mobile_app.test.app-debugAndroidTest-5 C:\Users\isiha\OneDrive - mycit.ie\Y3S1\GP\ACT\Mobile_ACT\app\build\intermediates\merged_res\debugAndroidTest\mergeDebugAndroidTestResources

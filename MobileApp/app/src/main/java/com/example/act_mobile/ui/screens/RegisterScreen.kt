@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 import android.util.Log
 
 @Composable
-fun RegisterScreen(onRegisterSuccess: () -> Unit) {
+fun RegisterScreen(onRegisterSuccess: () -> Unit, onLoginClick: () -> Unit) {
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -112,6 +112,11 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit) {
                     Text("Register")
                 }
             }
+            Spacer(modifier = Modifier.height(16.dp))
+            TextButton(onClick = onLoginClick) {
+                Text("Already have an account? Log in")
+            }
+
         }
     }
 }

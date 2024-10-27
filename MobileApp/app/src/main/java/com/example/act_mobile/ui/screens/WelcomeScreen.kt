@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 fun WelcomeScreen(onLoginClick: () -> Unit, onRegisterClick: () -> Unit) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Welcome") })
+            TopAppBar(title = { Text("ACT") })
         }
     ) { paddingValues ->
         Column(
@@ -22,7 +22,9 @@ fun WelcomeScreen(onLoginClick: () -> Unit, onRegisterClick: () -> Unit) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "Welcome to the App", style = MaterialTheme.typography.h5)
+            Text(text = "Welcome to ACT", style = MaterialTheme.typography.h4)
+            Text(text = "The Future of Trading", style = MaterialTheme.typography.body1)
+
 
             Spacer(modifier = Modifier.height(32.dp))
 
