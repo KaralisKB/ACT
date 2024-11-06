@@ -7,6 +7,8 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,7 +27,18 @@ fun SupportHelpScreen(onBackClick: () -> Unit) {
 
     BackHandler(onBack = { onBackClick() })
 
-    Scaffold {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Support & Help") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()

@@ -7,9 +7,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
 import androidx.compose.material.Card
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
+import androidx.compose.material.TopAppBar
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,7 +46,18 @@ fun FeedbackReviewsScreen(onBackClick: () -> Unit) {
 
     BackHandler(onBack = { onBackClick() })
 
-    Scaffold {
+    androidx.compose.material.Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Feedback & Rviews") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -129,7 +145,10 @@ fun FeedbackReviewsScreen(onBackClick: () -> Unit) {
                                 .fillMaxWidth()
                                 .padding(16.dp)
                         ) {
-                            Text(text = "Name: ${review.username}", style = MaterialTheme.typography.h6)
+                            Text(
+                                text = "Name: ${review.username}",
+                                style = MaterialTheme.typography.h6
+                            )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(text = "Review: ${review.review}")
                             Spacer(modifier = Modifier.height(4.dp))

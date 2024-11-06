@@ -1,5 +1,6 @@
 package com.example.act_mobile.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,6 +9,7 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.act_mobile.network.ApiClient
 import com.example.act_mobile.ui.model.Stock
@@ -17,6 +19,9 @@ import kotlinx.coroutines.launch
 fun TradeMarketScreen(modifier: Modifier = Modifier, onStockClick: (Stock) -> Unit) {
     val stockList = remember { mutableStateListOf<Stock>() }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val scaffoldState = rememberScaffoldState()
+
 
     // get data from API
     LaunchedEffect(Unit) {
@@ -29,10 +34,12 @@ fun TradeMarketScreen(modifier: Modifier = Modifier, onStockClick: (Stock) -> Un
                 e.printStackTrace()
             }
         }
+        Toast.makeText(context, "Click on a stock to get more analysis!", Toast.LENGTH_LONG).show()
     }
 
     Scaffold(
         modifier = modifier,
+        scaffoldState = scaffoldState
     ) {
         if (stockList.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

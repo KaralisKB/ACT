@@ -9,6 +9,7 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
+import androidx.compose.material.TextField
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
@@ -18,7 +19,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.google.firebase.auth.AuthCredential
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun SettingsScreen(
@@ -26,7 +30,7 @@ fun SettingsScreen(
     onEditUsernameClick: () -> Unit,
     onChangeEmailClick: () -> Unit,
     onChangePasswordClick: () -> Unit,
-    onDeleteAccountClick: () -> Unit,
+    onDeleteAccountClick: (String, String) -> Unit,  // Now takes email and password
     onNotificationsClick: () -> Unit,
     onPrivacyPreferencesClick: () -> Unit,
     onAppearanceClick: () -> Unit
@@ -73,8 +77,8 @@ fun SettingsScreen(
 
         if (showDialog) {
             ConfirmDeleteAccountDialog(
-                onConfirm = {
-                    onDeleteAccountClick()
+                onConfirm = { email, password ->
+                    onDeleteAccountClick(email, password)
                     showDialog = false
                 },
                 onDismiss = { showDialog = false }
@@ -95,28 +99,61 @@ fun SettingsItem(text: String, onClick: () -> Unit) {
     }
 }
 
-fun deleteAccount(auth: FirebaseAuth, onSuccess: () -> Unit) {
+fun deleteAccount(
+    auth: FirebaseAuth,
+    email: String,
+    password: String,
+    onSuccess: () -> Unit,
+    onError: (Exception) -> Unit
+) {
     val user = auth.currentUser
-    user?.delete()?.addOnCompleteListener { task ->
+    val credential = EmailAuthProvider.getCredential(email, password)
+
+    user?.reauthenticate(credential)?.addOnCompleteListener { task ->
         if (task.isSuccessful) {
-            onSuccess()
+            user.delete().addOnCompleteListener { deleteTask ->
+                if (deleteTask.isSuccessful) {
+                    val userId = user.uid
+                    val firestore = FirebaseFirestore.getInstance()
+
+                    firestore.collection("users").document(userId).delete()
+                        .addOnSuccessListener {
+                            onSuccess()
+                        }
+                        .addOnFailureListener { exception ->
+                            onError(exception)
+                        }
+                } else {
+                    deleteTask.exception?.let { onError(it) }
+                }
+            }
         } else {
-            task.exception?.printStackTrace()
+            task.exception?.let { onError(it) }
         }
     }
 }
 
+
 @Composable
 fun ConfirmDeleteAccountDialog(
-    onConfirm: () -> Unit,
+    onConfirm: (String, String) -> Unit,  // email, password
     onDismiss: () -> Unit
 ) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Delete Account") },
-        text = { Text("Are you sure you want to delete your account?") },
+        text = {
+            Column {
+                Text("Please enter your email and password to confirm deletion.")
+                TextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
+                TextField(value = password, onValueChange = { password = it }, label = { Text("Password") })
+            }
+        },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            TextButton(onClick = { onConfirm(email, password) }) {
                 Text("Delete")
             }
         },

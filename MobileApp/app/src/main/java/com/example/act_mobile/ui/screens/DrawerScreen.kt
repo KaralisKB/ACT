@@ -8,9 +8,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import com.example.act_mobile.R
 
@@ -19,6 +21,7 @@ fun DrawerScreen(
     username: String,
     profileImageUri: Uri?,
     onImageClick: () -> Unit,
+    onAddFundsClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onSupportClick: () -> Unit,
     onFeedbackClick: () -> Unit,
@@ -54,7 +57,35 @@ fun DrawerScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = username)
+        Text(
+            text = username,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        Text(
+            text = "Available Funds:  ", // TO DO
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+            Button(
+                onClick = onAddFundsClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = Color.Black
+                ),
+                modifier = Modifier
+                    .width(150.dp)
+                    .height(40.dp)
+            ) {
+                Text(
+                    text = "+ Add Funds",
+                    fontSize = 14.sp,
+                    color = Color.Black
+                )
+            }
+
+
 
         Spacer(modifier = Modifier.height(16.dp))
 

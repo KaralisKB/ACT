@@ -2,6 +2,7 @@ package com.example.act_mobile
 
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,24 +12,59 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import com.example.act_mobile.ui.screens.*
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
+import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private lateinit var googleSignInClient: GoogleSignInClient
+    private lateinit var auth: FirebaseAuth
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+
+        // firebase auth instance
+        val auth = FirebaseAuth.getInstance()
+
         // storing the  profile pic URI
         var profileImageUri by mutableStateOf<Uri?>(null)
+
+
+        //  google gign in
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+
+        googleSignInClient = GoogleSignIn.getClient(this, gso)
+
+        val signInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                handleGoogleSignInResult(account)
+            } catch (e: ApiException) {
+                if (e.statusCode == GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
+                    Log.d("MainActivity", "Google Sign-In was canceled by the user.")
+                } else {
+                    Log.e("MainActivity", "Google Sign-In failed: ${e.statusCode}")
+                }
+            }
+        }
 
         // profil pic picker to open the gallery
         val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             profileImageUri = uri  // updates the profile pic URI
         }
-
-        // firebase auth instance
-        val auth = FirebaseAuth.getInstance()
 
         setContent {
             var currentScreen by remember { mutableStateOf(if (auth.currentUser == null) "welcome" else "home") }
@@ -48,10 +84,18 @@ class MainActivity : ComponentActivity() {
                             username = user.displayName ?: user.email ?: "Your Username"
                         }
                         currentScreen = "home"
+                    },
+                    onGoogleSignInClick = {
+                        val signInIntent = googleSignInClient.signInIntent
+                        signInLauncher.launch(signInIntent)
+                    },
+                    onRegisterClick = {
+                        currentScreen = "register"
                     }
                 )
                 "register" -> RegisterScreen(
-                    onRegisterSuccess = { currentScreen = "login" } // after regisitering go to login
+                    onRegisterSuccess = { currentScreen = "login" }, // after registering go to log in
+                    onLoginClick = { currentScreen = "login" }
                 )
                 "home" -> {
                     val userId = auth.currentUser?.uid
@@ -67,7 +111,8 @@ class MainActivity : ComponentActivity() {
                             onSupportClick = { currentScreen = "support" }, // support screen
                             onFeedbackClick = { currentScreen = "feedback" }, // feedback screen
                             onNewsClick = { currentScreen = "news" },
-                            onSettingsClick = { currentScreen = "settings" } // settings screen
+                            onSettingsClick = { currentScreen = "settings" }, // settings screen
+                            onAddFundsClick = { /*TO DO */ }
                         )
                     }
                 }
@@ -85,7 +130,19 @@ class MainActivity : ComponentActivity() {
                     onEditUsernameClick = { currentScreen = "editUsername" }, // edit Username
                     onChangeEmailClick = { currentScreen = "changeEmail" },  // change Email
                     onChangePasswordClick = { /* change Password */ },
-                    onDeleteAccountClick = { deleteAccount(auth) { currentScreen = "welcome" } }, //  account deletion
+                    onDeleteAccountClick = { email, password ->
+                        deleteAccount(
+                            auth = auth,
+                            email = email,
+                            password = password,
+                            onSuccess = {
+                                currentScreen = "welcome"
+                            },
+                            onError = { exception ->
+                                exception.printStackTrace()
+                            }
+                        )
+                    },
                     onNotificationsClick = { /* notifications */ },
                     onPrivacyPreferencesClick = { /* privacy preference*/ },
                     onAppearanceClick = { /* light/dark */ }
@@ -112,6 +169,23 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun handleGoogleSignInResult(account: GoogleSignInAccount?) {
+        if (account == null) {
+            Log.e("MainActivity", "Google Sign-In failed: Account is null")
+            return
+        }
+
+        val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+        auth.signInWithCredential(credential)
+            .addOnCompleteListener(this) { task ->
+                if (task.isSuccessful) {
+                    Log.d("MainActivity", "Google Sign In successful")
+                } else {
+                    task.exception?.printStackTrace()
+                }
+            }
+    }
 }
 
 @Composable
@@ -123,12 +197,15 @@ fun HomeWithDrawer(
     onSupportClick: () -> Unit,
     onFeedbackClick: () -> Unit,
     onNewsClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onAddFundsClick: () -> Unit
 
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var username by remember { mutableStateOf("Loading...") }
+    var currentBalance by remember { mutableStateOf("1000") } // example
+
 
     // Firebase Firestore instance
     val firestore = FirebaseFirestore.getInstance()
@@ -157,7 +234,8 @@ fun HomeWithDrawer(
                 onSupportClick = onSupportClick,
                 onFeedbackClick = onFeedbackClick,
                 onNewsClick = onNewsClick,
-                onSettingsClick = onSettingsClick
+                onSettingsClick = onSettingsClick,
+                onAddFundsClick = onAddFundsClick
             )
         }
     ) {
@@ -178,7 +256,12 @@ fun HomeWithDrawer(
                 )
             }
         ) { paddingValues ->
-            MainAppScreen(modifier = Modifier.padding(paddingValues))
+            MainAppScreen(
+                modifier = Modifier.padding(paddingValues),
+                username = username,
+                currentBalance = currentBalance,
+                onAddFundsClick = onAddFundsClick
+            )
         }
     }
 }

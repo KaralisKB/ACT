@@ -12,7 +12,11 @@ import kotlinx.coroutines.launch
 import android.util.Log
 
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit) {
+fun LoginScreen(
+    onLoginSuccess: () -> Unit,
+    onGoogleSignInClick: () -> Unit,
+    onRegisterClick: () -> Unit,
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
@@ -52,7 +56,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                 loading = false
                                 if (task.isSuccessful) {
                                     Log.d("LoginScreen", "Login successful for: $email")
-                                    onLoginSuccess() //navigate to home screen after succesful login
+                                    onLoginSuccess() //navigate to home screen after successful login
                                 } else {
                                     val errorMessage = task.exception?.message ?: "Unknown error"
                                     Log.e("LoginScreen", "Login failed: $errorMessage")
@@ -71,6 +75,18 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 } else {
                     Text("Login")
                 }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onGoogleSignInClick,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
+            ) {
+                Text("Sign in with Google")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            TextButton(onClick = onRegisterClick) {
+                Text("No account? Start Making Money today!")
             }
         }
     }
