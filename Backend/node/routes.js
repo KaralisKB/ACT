@@ -1,6 +1,7 @@
 const express = require('express');
 const admin = require('./firebase');
 const db = admin.firestore();
+const stripe = require('stripe')('sk_test_51QIBRoCd7KzAIIn8iJCQqCRhs6UgIe2A2pn00m2ATgYVN3gxqdHoUJ22Iq3gncDE7Ng6WpguWICaTzwT5JSohwbF00hEiKjG6f');
 
 const router = express.Router();
 
@@ -16,13 +17,15 @@ router.post('/auth/register', async (req, res) => {
             email: email,
             password: password,
             userName: userName,
+            balance: 0
         });
 
         await db.collection('users').doc(userRecord.uid).set({
             email: email,
             userName: userName,
             role: role, //ie fund manager or admin.
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            balance: 0,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
         res.status(201).send({
@@ -32,6 +35,7 @@ router.post('/auth/register', async (req, res) => {
                 email: userRecord.email,
                 userName: userRecord.userName,
                 role: role,
+                balance: balance
             }
         });
     } catch (error) {
@@ -75,7 +79,7 @@ router.post('/portfolios', async (res, req) => {
 
         if (clientID) {
             portfolioData.clientID = clientID
-        } 
+        }
         
 
         const newPortfolioAdd = portfolioColletion.doc();
@@ -87,24 +91,55 @@ router.post('/portfolios', async (res, req) => {
     }
 });
 
-router.get('/stocks', async (req, res) => {
+// Add Balance to user
+router.post('/balance/add', async (res, req) => {
+    const { clientID, moneyAmount } = req.body;
+
     try {
-        const stockRef = db.collection('stocks');
-        const snapshot = await stockRef.get();
-        if(snapshot.empty) {
-            return res.status(404).json({ message: "No Stocks Found"});
+        const userRecord = await db.collection('users').doc(uid).get();
+
+        if(!userDoc.exists) {
+            return res.status(404).send({message: "User not found in database."})
         }
 
-        const stocks = [];
-        snapshot.forEach(doc => {
-            stocks.push({ id: doc.id, ...doc.data()});
-        });
-
-        res.status(200).json(stocks);
-    }catch (error) {
-        console.error('Error retrieving stocks:', error);
-        res.status(500).json({ message: 'Internal Server Error'});
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
+
 });
+
+const endpointSecret = "YOUR_STRIPE_WEBHOOK_SECRET";
+
+app.post('/webhook', (req, res) => {
+    const sig = req.headers['stripe-signature'];
+
+    let event;
+    try {
+        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    } catch (err) {
+        console.log("⚠  Webhook signature verification failed.");
+        return res.sendStatus(400);
+    }
+
+    // Handle the event
+    if (event.type === 'payment_intent.succeeded') {
+        const paymentIntent = event.data.object;
+        const userId = paymentIntent.metadata.userId; // Assuming you attach user ID in metadata
+        const amount = paymentIntent.amount_received / 100; // Stripe amounts are in cents
+
+        // Update Firebase balance
+        const userRef = admin.firestore().collection('users').doc(uid);
+        userRef.update({
+            balance: admin.firestore.FieldValue.increment(amount)
+        })
+        .then(() => console.log("Balance updated for user ${userId}"))
+        .catch(error => console.error("Error updating balance:", error));
+    }
+
+    res.json({received: true});
+});
+
+
+
 
 module.exports = router;
