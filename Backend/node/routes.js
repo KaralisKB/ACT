@@ -110,7 +110,7 @@ router.post('/balance/add', async (res, req) => {
 
 const endpointSecret = "YOUR_STRIPE_WEBHOOK_SECRET";
 
-app.post('/webhook', (req, res) => {
+router.post('/webhook', (req, res) => {
     const sig = req.headers['stripe-signature'];
 
     let event;
