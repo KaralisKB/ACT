@@ -1,9 +1,14 @@
 const express = require('express');
 const admin = require('./firebase');
 const db = admin.firestore();
-const stripe = require('stripe')('sk_test_51QIBRoCd7KzAIIn8iJCQqCRhs6UgIe2A2pn00m2ATgYVN3gxqdHoUJ22Iq3gncDE7Ng6WpguWICaTzwT5JSohwbF00hEiKjG6f');
+const paypal = require('@paypal/checkout-server-sdk')
+
 
 const router = express.Router();
+
+const environment = new paypal.core.SandboxEnvironment('ASheza9zVdnhKiMQic87pN_if978hmrnmHctvst10vBDnrjV5GFcSzqFbvDnMS-ZTU6Kxx1OaAws4Fp-', 'EE89AzAu7PGEdRcpXVwrIkuTMQ9cncuzQrl2pYjTbct_0I8kss2iXehCzAVaqDlKR_LpQ7uPruPlr_gT');
+const client = new paypal.core.PayPalHttpClient(environment);
+
 
 // Firestore refs
 const portfolioColletion = db.collection('portfolio');
@@ -108,36 +113,72 @@ router.post('/balance/add', async (res, req) => {
 
 });
 
-const endpointSecret = "whsec_UyYuBiVfHRNWpwMRqLXTC8vAVHrFPbqR";
+router.post('/create-order', async (req, res) => {
+    const { amount } = req.body;
 
-router.post('/webhook', (req, res) => {
-    const sig = req.headers['stripe-signature'];
+    const request = new paypal.orders.OrdersCreateRequest();
+    request.requestBody({
+        intent: 'CAPTURE',
+        purchase_units: [{
+            amount: {
+                currency_code: 'USD',
+                value: amount
+            }
+        }]
+    });
 
-    let event;
     try {
-        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-    } catch (err) {
-        console.log("⚠  Webhook signature verification failed.");
-        return res.sendStatus(400);
+        const order = await client.execute(request);
+        res.json({ orderId: order.result.id });
+    } catch (error) {
+        res.status(500).send(error);
     }
-
-    // Handle the event
-    if (event.type === 'payment_intent.succeeded') {
-        const paymentIntent = event.data.object;
-        const userId = paymentIntent.metadata.userId; // Assuming you attach user ID in metadata
-        const amount = paymentIntent.amount_received / 100; // Stripe amounts are in cents
-
-        // Update Firebase balance
-        const userRef = admin.firestore().collection('users').doc(uid);
-        userRef.update({
-            balance: admin.firestore.FieldValue.increment(amount)
-        })
-        .then(() => console.log("Balance updated for user ${userId}"))
-        .catch(error => console.error("Error updating balance:", error));
-    }
-
-    res.json({received: true});
+    
 });
+
+router.post('/capture-order', async (req, res) => {
+    const { orderId } = req.body;
+
+    const request = new paypal.orders.OrdersCaptureRequest(orderId);
+    request.requestBody({});
+
+    try {
+        const capture = await client.execute(request);
+        
+        // Payment succeeded, update user balance in the database
+        const amount = capture.result.purchase_units[0].payments.captures[0].amount.value;
+        
+        // Assuming a function updateUserBalance to update the user's balance
+        await updateUserBalance(req.user.id, parseFloat(amount));
+        
+        res.json({ status: 'Payment captured successfully' });
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+async function updateUserBalance(uid, amount) {
+    const { uid, amount } = req.body;
+    try {
+        const userRecord = await db.collection('users').doc(uid).get();
+
+        if(!userDoc.exists) {
+            return res.status(404).send({message: "User not found in database."})
+        }
+
+        const currentBalance = userDoc.data().balance || 0;
+
+        const newBalance = currentBalance + amount;
+
+        await userRecord.update({ balance: newBalance});
+
+        console.log('Balance has updated succesfully.');
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
 
 
 
