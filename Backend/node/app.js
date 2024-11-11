@@ -22,7 +22,7 @@ app.listen(3000, () => {
 })
 
 app.use(cors({
-    origin: 'https://localhost:3000',
+    origin: 'localhost:3000',
     methods: 'GET, POST, PUT, DELETE',
     allowedHeaders: 'Content-Type, Authorization',
     credentials: true,
