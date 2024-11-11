@@ -7,8 +7,6 @@ const stripe = require('stripe')('sk_test_YOUR_SECRET_KEY'); // Replace with you
 
 const router = express.Router();
 
-const environment = new paypal.core.SandboxEnvironment('ASheza9zVdnhKiMQic87pN_if978hmrnmHctvst10vBDnrjV5GFcSzqFbvDnMS-ZTU6Kxx1OaAws4Fp-', 'EE89AzAu7PGEdRcpXVwrIkuTMQ9cncuzQrl2pYjTbct_0I8kss2iXehCzAVaqDlKR_LpQ7uPruPlr_gT');
-const client = new paypal.core.PayPalHttpClient(environment);
 
 
 // Firestore refs
