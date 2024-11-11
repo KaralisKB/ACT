@@ -3,6 +3,9 @@ const admin = require('./firebase');
 const dotenv = require('dotenv');
 const routes = require("./routes");
 
+const cors = require('cors');
+app.use(cors({origin: 'https://localhost:3000'}));
+
 // load the enironment stuff
 dotenv.config()
 
