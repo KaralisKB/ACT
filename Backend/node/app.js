@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 const routes = require("./routes");
 
 const cors = require('cors');
-app.use(cors({origin: 'https://localhost:3000'}));
+
 
 // load the enironment stuff
 dotenv.config()
@@ -20,4 +20,6 @@ app.use('/api', routes);
 app.listen(3000, () => {
     console.log("Server is running on port 3000."); 
 })
+
+app.use(cors({origin: 'https://localhost:3000'}));
 
