@@ -1,7 +1,8 @@
 const express = require('express');
 const admin = require('./firebase');
+const bodyParser = require('body-parser');
 const db = admin.firestore();
-const paypal = require('@paypal/checkout-server-sdk')
+const stripe = require('stripe')('sk_test_YOUR_SECRET_KEY'); // Replace with your Stripe secret key
 
 
 const router = express.Router();
@@ -124,7 +125,15 @@ router.post('/create-order', async (req, res) => {
                 currency_code: 'USD',
                 value: amount
             }
-        }]
+        }],
+        application_context: {
+            brand_name: "Your Brand",
+            landing_page: "BILLING",
+            user_action: "PAY_NOW",
+            return_url: "https://yourdomain.com/return",
+            cancel_url: "https://yourdomain.com/cancel"
+        }
+
     });
 
     try {
@@ -178,7 +187,49 @@ async function updateUserBalance(uid, amount) {
     }
 }
 
+router.use(bodyParser.json());
 
+const endpointSecret = 'whsec_ZzpwcZDTquTdVspM4lGfKSUrKMn0WbR5'; // Replace with your webhook secret
+
+
+app.post('/webhook', (req, res) => {
+    const sig = req.headers['stripe-signature'];
+
+    let event;
+
+    try {
+        // Verify the event's authenticity
+        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    } catch (err) {
+        console.error(`Webhook signature verification failed: ${err.message}`);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the event
+    switch (event.type) {
+        case 'checkout.session.completed':
+            const session = event.data.object;
+
+            // Extract relevant data
+            const customerEmail = session.customer_details.email;
+            const amountPaid = session.amount_total / 100; // Amount is in cents
+            const currency = session.currency;
+
+            // Example: Update your database
+            console.log(`Payment received: ${amountPaid} ${currency} from ${customerEmail}`);
+
+            // Call your database logic here
+            // Example:
+            // await updateDatabase(customerEmail, amountPaid, currency);
+
+            break;
+        default:
+            console.log(`Unhandled event type ${event.type}`);
+    }
+
+    // Return a response to acknowledge receipt of the event
+    res.status(200).send('Event received');
+});
 
 
 
