@@ -158,7 +158,6 @@ router.post('/capture-order', async (req, res) => {
 });
 
 async function updateUserBalance(uid, amount) {
-    const { uid, amount } = req.body;
     try {
         const userRecord = await db.collection('users').doc(uid).get();
 
