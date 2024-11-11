@@ -114,57 +114,6 @@ router.post('/balance/add', async (res, req) => {
 
 });
 
-router.post('/create-order', async (req, res) => {
-    const { amount } = req.body;
-
-    const request = new paypal.orders.OrdersCreateRequest();
-    request.requestBody({
-        intent: 'CAPTURE',
-        purchase_units: [{
-            amount: {
-                currency_code: 'USD',
-                value: amount
-            }
-        }],
-        application_context: {
-            brand_name: "Your Brand",
-            landing_page: "BILLING",
-            user_action: "PAY_NOW",
-            return_url: "https://yourdomain.com/return",
-            cancel_url: "https://yourdomain.com/cancel"
-        }
-
-    });
-
-    try {
-        const order = await client.execute(request);
-        res.json({ orderId: order.result.id });
-    } catch (error) {
-        res.status(500).send(error);
-    }
-    
-});
-
-router.post('/capture-order', async (req, res) => {
-    const { orderId } = req.body;
-
-    const request = new paypal.orders.OrdersCaptureRequest(orderId);
-    request.requestBody({});
-
-    try {
-        const capture = await client.execute(request);
-        
-        // Payment succeeded, update user balance in the database
-        const amount = capture.result.purchase_units[0].payments.captures[0].amount.value;
-        
-        // Assuming a function updateUserBalance to update the user's balance
-        await updateUserBalance(req.user.id, parseFloat(amount));
-        
-        res.json({ status: 'Payment captured successfully' });
-    } catch (error) {
-        res.status(500).send(error);
-    }
-});
 
 async function updateUserBalance(uid, amount) {
     try {
