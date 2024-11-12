@@ -178,12 +178,6 @@ router.post('/webhook/', express.raw({ type: 'application/json' }), (req, res) =
     res.status(200).send('Event received');
 });
 
-// Start your Express server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
-
 
 
 module.exports = router;
