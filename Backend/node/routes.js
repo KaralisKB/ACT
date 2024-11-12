@@ -147,7 +147,7 @@ router.use(bodyParser.json());
 const endpointSecret = 'whsec_ZzpwcZDTquTdVspM4lGfKSUrKMn0WbR5'; // Replace with your webhook secret
 
 
-router.post('/webhook/', express.json({ type: 'application/json' }), (req, res) => {
+router.post('/webhook/', express.json({ type: 'application/json' }), async  (req, res) => {
     const event = req.body;
 
     // Handle the event
