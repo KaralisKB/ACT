@@ -139,34 +139,25 @@ router.use(bodyParser.json());
 const endpointSecret = 'whsec_ZzpwcZDTquTdVspM4lGfKSUrKMn0WbR5'; // Replace with your webhook secret
 
 
-router.post('/webhook/', express.raw({ type: 'application/json' }), (req, res) => {
-    const sig = req.headers['stripe-signature'];
-    let event;
+router.post('/webhook/', express.json({ type: 'application/json' }), (req, res) => {
+    const event = req.body;
 
-    try {
-        // Verify the event using Stripe's constructEvent method
-        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-    } catch (err) {
-        console.error(`Webhook signature verification failed: ${err.message}`);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    // Handle different types of events
+    // Handle the event
     switch (event.type) {
         case 'checkout.session.completed':
             const session = event.data.object;
 
-            // Extract data from the session object
-            const customerEmail = session.customer_details.email;
-            const amountPaid = session.amount_total / 100; // Stripe amount is in cents
-            const currency = session.currency;
+            // Extract relevant details from the session
+            const customerEmail = session.customer_details.email; // Customer's email
+            const amountPaid = session.amount_total / 100; // Total amount paid (in dollars, assuming USD)
+            const currency = session.currency; // Currency (e.g., "usd")
+            const clientReferenceId = session.client_reference_id; // Your unique reference ID
 
-            console.log(`Payment received: ${amountPaid} ${currency} from ${customerEmail}`);
+            console.log(`Payment completed: ${amountPaid} ${currency} from ${customerEmail}`);
 
-            // Update user balance asynchronously
-            updateUserBalance(session.client_reference_id, amountPaid)
-                .then(() => console.log('User balance updated successfully'))
-                .catch((error) => console.error('Error updating user balance:', error));
+            // Add your custom logic here (e.g., update user balance, send confirmation email)
+            // Example: Update user balance using clientReferenceId
+            // updateUserBalance(clientReferenceId, amountPaid);
 
             break;
 
@@ -175,7 +166,7 @@ router.post('/webhook/', express.raw({ type: 'application/json' }), (req, res) =
     }
 
     // Acknowledge receipt of the event
-    res.status(200).send('Event received');
+    res.status(200).json({ received: true });
 });
 
 
