@@ -49,7 +49,7 @@ router.post('/auth/register', async (req, res) => {
 
 //Login
 
-router.post('/auth/login', async (res, req) => {
+router.post('/auth/login', async (req, res) => {
     const {idToken} = req.body;
 
     try {
@@ -58,7 +58,7 @@ router.post('/auth/login', async (res, req) => {
 
         const userRecord = await db.collection('users').doc(uid).get();
 
-        if(!userDoc.exists) {
+        if(!userRecord.exists) {
             return res.status(404).send({message: "User not found in database."})
         }
 
@@ -71,7 +71,7 @@ router.post('/auth/login', async (res, req) => {
 });
 
 // Create a new portfolio 
-router.post('/portfolios', async (res, req) => {
+router.post('/portfolios', async (req, res) => {
     const { clientID, value } = req.body;
 
     try {
@@ -96,13 +96,13 @@ router.post('/portfolios', async (res, req) => {
 });
 
 // Add Balance to user
-router.post('/balance/add', async (res, req) => {
+router.post('/balance/add', async (req, res) => {
     const { clientID, moneyAmount } = req.body;
 
     try {
         const userRecord = await db.collection('users').doc(uid).get();
 
-        if(!userDoc.exists) {
+        if(!userRecord.exists) {
             return res.status(404).send({message: "User not found in database."})
         }
 
@@ -117,7 +117,7 @@ async function updateUserBalance(uid, amount) {
     try {
         const userRecord = await db.collection('users').doc(uid).get();
 
-        if(!userDoc.exists) {
+        if(!userRecord.exists) {
             return res.status(404).send({message: "User not found in database."})
         }
 
@@ -139,9 +139,8 @@ router.use(bodyParser.json());
 const endpointSecret = 'whsec_ZzpwcZDTquTdVspM4lGfKSUrKMn0WbR5'; // Replace with your webhook secret
 
 
-router.post('/webhook/', (req, res) => {
+router.post('/webhook/', express.raw({ type: 'application/json' }), (req, res) => {
     const sig = req.headers['stripe-signature'];
-
     let event;
 
     try {
@@ -162,19 +161,17 @@ router.post('/webhook/', (req, res) => {
             const amountPaid = session.amount_total / 100; // Amount is in cents
             const currency = session.currency;
 
-            // Example: Update your database
             console.log(`Payment received: ${amountPaid} ${currency} from ${customerEmail}`);
 
-            // Call your database logic here
-            // Example:
-            // await updateDatabase(customerEmail, amountPaid, currency);
+            // Example: Update your database asynchronously
+            updateUserBalance(session.client_reference_id, amountPaid).catch(console.error);
 
             break;
         default:
             console.log(`Unhandled event type ${event.type}`);
     }
 
-    // Return a response to acknowledge receipt of the event
+    // Acknowledge receipt of the event
     res.status(200).send('Event received');
 });
 
