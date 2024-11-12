@@ -113,26 +113,34 @@ router.post('/balance/add', async (req, res) => {
 });
 
 
-async function updateUserBalance(uid, amount) {
+async function updateUserBalance(email, amount) {
     try {
-        const userRecord = await db.collection('users').doc(uid).get();
+        // Find the user by email
+        const userQuerySnapshot = await db.collection('users').where('email', '==', email).get();
 
-        if(!userRecord.exists) {
-            return res.status(404).send({message: "User not found in database."})
+        if (userQuerySnapshot.empty) {
+            console.error(`User with email ${email} not found.`);
+            return { success: false, message: "User not found in database." };
         }
 
-        const currentBalance = userDoc.data().balance || 0;
+        // Get the user document reference
+        const userDoc = userQuerySnapshot.docs[0]; // Assuming email is unique
+        const userRef = userDoc.ref;
 
+        // Get current balance and update it
+        const currentBalance = userDoc.data().balance || 0;
         const newBalance = currentBalance + amount;
 
-        await userRecord.update({ balance: newBalance});
+        await userRef.update({ balance: newBalance });
 
-        console.log('Balance has updated succesfully.');
-
+        console.log(`Balance has been successfully updated for user with email ${email}. New Balance: ${newBalance}`);
+        return { success: true };
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error(`Error updating balance for user with email ${email}:`, error.message);
+        throw error;
     }
 }
+
 
 router.use(bodyParser.json());
 
@@ -151,13 +159,21 @@ router.post('/webhook/', express.json({ type: 'application/json' }), (req, res) 
             const customerEmail = session.customer_details.email; // Customer's email
             const amountPaid = session.amount_total / 100; // Total amount paid (in dollars, assuming USD)
             const currency = session.currency; // Currency (e.g., "usd")
-            const clientReferenceId = session.client_reference_id; // Your unique reference ID
 
             console.log(`Payment completed: ${amountPaid} ${currency} from ${customerEmail}`);
 
-            // Add your custom logic here (e.g., update user balance, send confirmation email)
-            // Example: Update user balance using clientReferenceId
-            // updateUserBalance(clientReferenceId, amountPaid);
+            try {
+                // Update user balance using the email
+                const result = await updateUserBalance(customerEmail, amountPaid);
+
+                if (result.success) {
+                    console.log(`Balance updated successfully for user with email ${customerEmail}`);
+                } else {
+                    console.error(result.message);
+                }
+            } catch (error) {
+                console.error(`Failed to update balance for user with email ${customerEmail}:`, error.message);
+            }
 
             break;
 
