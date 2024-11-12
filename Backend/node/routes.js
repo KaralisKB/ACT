@@ -144,35 +144,44 @@ router.post('/webhook/', express.raw({ type: 'application/json' }), (req, res) =
     let event;
 
     try {
-        // Verify the event's authenticity
+        // Verify the event using Stripe's constructEvent method
         event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
     } catch (err) {
         console.error(`Webhook signature verification failed: ${err.message}`);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    // Handle the event
+    // Handle different types of events
     switch (event.type) {
         case 'checkout.session.completed':
             const session = event.data.object;
 
-            // Extract relevant data
+            // Extract data from the session object
             const customerEmail = session.customer_details.email;
-            const amountPaid = session.amount_total / 100; // Amount is in cents
+            const amountPaid = session.amount_total / 100; // Stripe amount is in cents
             const currency = session.currency;
 
             console.log(`Payment received: ${amountPaid} ${currency} from ${customerEmail}`);
 
-            // Example: Update your database asynchronously
-            updateUserBalance(session.client_reference_id, amountPaid).catch(console.error);
+            // Update user balance asynchronously
+            updateUserBalance(session.client_reference_id, amountPaid)
+                .then(() => console.log('User balance updated successfully'))
+                .catch((error) => console.error('Error updating user balance:', error));
 
             break;
+
         default:
-            console.log(`Unhandled event type ${event.type}`);
+            console.log(`Unhandled event type: ${event.type}`);
     }
 
     // Acknowledge receipt of the event
     res.status(200).send('Event received');
+});
+
+// Start your Express server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
 
 
