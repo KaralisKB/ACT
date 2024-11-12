@@ -7,6 +7,8 @@ const stripe = require('stripe')('sk_test_YOUR_SECRET_KEY'); // Replace with you
 
 const router = express.Router();
 
+router.use(express.json());
+router.use(express.urlencoded({ extended:true }));
 
 
 // Firestore refs
