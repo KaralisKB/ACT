@@ -50,23 +50,43 @@ router.post('/auth/register', async (req, res) => {
 //Login
 
 router.post('/auth/login', async (req, res) => {
-    const {idToken} = req.body;
+    const { email, password } = req.body;
 
     try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        const uid = decodedToken.uid;
+        // Fetch the user by email from Firestore
+        const userQuerySnapshot = await db.collection('users').where('email', '==', email).get();
 
-        const userRecord = await db.collection('users').doc(uid).get();
-
-        if(!userRecord.exists) {
-            return res.status(404).send({message: "User not found in database."})
+        if (userQuerySnapshot.empty) {
+            return res.status(404).send({ error: "User not found" });
         }
 
-        const userData = userRecord.data();
-        res.status(200).send({message: "Login succesful!", user: userData});
+        // Get user document
+        const userDoc = userQuerySnapshot.docs[0];
+        const userData = userDoc.data();
 
+        // Check if the password matches (assuming passwords are stored as plain text, which is not secure)
+        if (userData.password !== password) {
+            return res.status(401).send({ error: "Invalid credentials" });
+        }
+
+        // Generate a simple session token (or use Firebase Auth or JWT for production)
+        const sessionToken = `token_${userDoc.id}_${Date.now()}`;
+
+        // Return user data and session token
+        res.status(200).send({
+            message: "Login successful",
+            user: {
+                id: userDoc.id,
+                email: userData.email,
+                userName: userData.userName,
+                role: userData.role,
+                balance: userData.balance
+            },
+            token: sessionToken
+        });
     } catch (error) {
-        res.status(401).send({ error: "Unauthorized"});
+        console.error("Error during login:", error.message);
+        res.status(500).send({ error: "Internal server error" });
     }
 });
 
