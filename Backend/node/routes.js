@@ -13,37 +13,23 @@ router.use(express.json());
 const portfolioColletion = db.collection('portfolio');
 
 // Registration
-router.post('/auth/register', async (req, res) => {
-    const {email, password, userName, role} = req.body;
+router.post("/auth/register", async (req, res) => {
+    const { uid, email, firstName, lastName, role } = req.body;
 
-    try{
-        const userRecord = await admin.auth().createUser({
-            email: email,
-            password: password,
-            userName: userName,
-            balance: 0
-        });
-
-        await db.collection('users').doc(userRecord.uid).set({
-            email: email,
-            userName: userName,
-            role: role, //ie fund manager or admin.
+    try {
+        // Add user details to Firestore
+        await db.collection("users").doc(uid).set({
+            email,
+            firstName,
+            lastName,
+            role,
             balance: 0,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        res.status(201).send({
-            message: "User has registered succesfully.",
-            user: {
-                uid: userRecord.uid,
-                email: userRecord.email,
-                userName: userRecord.userName,
-                role: role,
-                balance: balance
-            }
-        });
+        res.status(201).send({ message: "User registered successfully." });
     } catch (error) {
-        res.status(400).send({error: error.message});
+        res.status(400).send({ error: error.message });
     }
 });
 
