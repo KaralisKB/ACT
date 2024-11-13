@@ -15,22 +15,30 @@ const portfolioColletion = db.collection('portfolio');
 router.post("/auth/register", async (req, res) => {
     const { uid, email, firstName, lastName, role } = req.body;
 
+    if (!uid || !email || !firstName || !lastName) {
+        return res.status(400).send({ error: "Missing required fields." });
+    }
+
     try {
+        // Log incoming request for debugging
+        console.log("Registering user with details:", { uid, email, firstName, lastName });
+
         // Add user details to Firestore
         await db.collection("users").doc(uid).set({
             email,
             firstName,
             lastName,
-            role,
-            balance: 0, // Default balance
+            role: role || "user", // Default role if not provided
+            balance: 0,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
         res.status(201).send({ message: "User registered successfully." });
     } catch (error) {
-        res.status(400).send({ error: error.message });
+        console.error("Error saving user to Firestore:", error.message);
+        res.status(500).send({ error: "Failed to save user data in Firestore." });
     }
-});// Registration
+});
 
 
 //Login
