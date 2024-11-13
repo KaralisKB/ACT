@@ -2,7 +2,8 @@ const express = require('express');
 const admin = require('./firebase');
 const bodyParser = require('body-parser');
 const db = admin.firestore();
-const stripe = require('stripe')('sk_test_YOUR_SECRET_KEY'); // Replace with your Stripe secret key
+const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
+const stripe = require('stripe')('sk_test_51QIBRoCd7KzAIIn8iJCQqCRhs6UgIe2A2pn00m2ATgYVN3gxqdHoUJ22Iq3gncDE7Ng6WpguWICaTzwT5JSohwbF00hEiKjG6f'); // Replace with your Stripe secret key
 
 
 const router = express.Router();
@@ -64,41 +65,41 @@ router.post("/auth/register", async (req, res) => {
 router.post('/auth/login', async (req, res) => {
     const { email, password } = req.body;
 
-    try {
-        // Fetch the user by email from Firestore
-        const userQuerySnapshot = await db.collection('users').where('email', '==', email).get();
+    if (!email || !password) {
+        return res.status(400).send({ error: "Email and password are required." });
+    }
 
-        if (userQuerySnapshot.empty) {
-            return res.status(404).send({ error: "User not found" });
+    try {
+        // Sign in user with Firebase Auth
+        const auth = getAuth();
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Fetch user data from Firestore using UID
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (!userDoc.exists) {
+            return res.status(404).send({ error: "User not found in Firestore." });
         }
 
-        // Get user document
-        const userDoc = userQuerySnapshot.docs[0];
         const userData = userDoc.data();
 
-        // Check if the password matches (assuming passwords are stored as plain text, which is not secure)
-        if (userData.password !== password) {
-            return res.status(401).send({ error: "Invalid credentials" });
-        }
-
-        // Generate a simple session token (or use Firebase Auth or JWT for production)
-        const sessionToken = `token_${userDoc.id}_${Date.now()}`;
-
-        // Return user data and session token
+        // Return user data and Firebase ID token
+        const idToken = await user.getIdToken(); // Firebase ID token for secure client-server communication
         res.status(200).send({
             message: "Login successful",
             user: {
-                id: userDoc.id,
+                id: user.uid,
                 email: userData.email,
-                userName: userData.userName,
+                firstName: userData.firstName,
+                lastName: userData.lastName,
                 role: userData.role,
-                balance: userData.balance
+                balance: userData.balance,
             },
-            token: sessionToken
+            token: idToken,
         });
     } catch (error) {
         console.error("Error during login:", error.message);
-        res.status(500).send({ error: "Internal server error" });
+        res.status(401).send({ error: error.message });
     }
 });
 
