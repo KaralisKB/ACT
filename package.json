@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@paypal/checkout-server-sdk": "^1.0.3",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "firebase": "^11.0.1",
+    "stripe": "^17.3.1"
+  }
+}
