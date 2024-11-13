@@ -2,9 +2,9 @@ const express = require('express');
 const admin = require('./firebase');
 const bodyParser = require('body-parser');
 const db = admin.firestore();
-const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
+const { signInWithEmailAndPassword } = require('firebase/auth');
 const stripe = require('stripe')('sk_test_51QIBRoCd7KzAIIn8iJCQqCRhs6UgIe2A2pn00m2ATgYVN3gxqdHoUJ22Iq3gncDE7Ng6WpguWICaTzwT5JSohwbF00hEiKjG6f'); // Replace with your Stripe secret key
-
+const auth = admin.auth();
 
 const router = express.Router();
 
@@ -71,7 +71,6 @@ router.post('/auth/login', async (req, res) => {
 
     try {
         // Sign in user with Firebase Auth
-        const auth = getAuth();
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
