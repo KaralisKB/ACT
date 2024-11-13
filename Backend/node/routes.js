@@ -12,7 +12,6 @@ router.use(express.json());
 // Firestore refs
 const portfolioColletion = db.collection('portfolio');
 
-// Registration
 router.post("/auth/register", async (req, res) => {
     const { uid, email, firstName, lastName, role } = req.body;
 
@@ -23,7 +22,7 @@ router.post("/auth/register", async (req, res) => {
             firstName,
             lastName,
             role,
-            balance: 0,
+            balance: 0, // Default balance
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
@@ -31,7 +30,8 @@ router.post("/auth/register", async (req, res) => {
     } catch (error) {
         res.status(400).send({ error: error.message });
     }
-});
+});// Registration
+
 
 //Login
 
