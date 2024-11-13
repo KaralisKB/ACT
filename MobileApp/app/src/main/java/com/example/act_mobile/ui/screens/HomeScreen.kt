@@ -4,19 +4,44 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.act_mobile.ui.screens.AddFundsDialog
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun HomeScreen(
+    userId: String,
     username: String,
     currentBalance: String,
-    onAddFundsClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+    modifier: Modifier = Modifier,
+)  {
+    var currentBalance by remember { mutableStateOf("Loading...") }
+
+    LaunchedEffect(userId) {
+        FirebaseFirestore.getInstance().collection("users").document(userId).get()
+            .addOnSuccessListener { document ->
+                if (document != null && document.exists()) {
+                    currentBalance = document.getDouble("balance")?.toString() ?: "0.00"
+                } else {
+                    currentBalance = "0.00"
+                }
+            }
+            .addOnFailureListener {
+                currentBalance = "Error loading balance"
+            }
+    }
+
+
+
     Scaffold(
         modifier = modifier,
     ) {
@@ -43,26 +68,10 @@ fun HomeScreen(
                 style = MaterialTheme.typography.body1,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            androidx.compose.material3.Button(
-                onClick = onAddFundsClick,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color.Black
-                ),
-                modifier = Modifier
-                    .width(150.dp)
-                    .height(40.dp)
-            ) {
-                androidx.compose.material3.Text(
-                    text = "+ Add Funds",
-                    fontSize = 14.sp,
-                    color = Color.Black
-                )
-            }
+
 
             Spacer(modifier = Modifier.height(45.dp))
 
-            //  to implement current stocks
             Text(
                 text = "Your Current Bought Stocks",
                 style = MaterialTheme.typography.h6,

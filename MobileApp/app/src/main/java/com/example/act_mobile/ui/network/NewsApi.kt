@@ -1,18 +1,8 @@
-package com.example.act_mobile.network
+package com.example.act_mobile.ui.network
 
+import com.example.act_mobile.ui.model.NewsResponse
 import retrofit2.http.GET
 import retrofit2.http.Query
-
-data class NewsArticle(
-    val title: String,
-    val description: String,
-    val url: String,
-    val urlToImage: String?
-)
-
-data class NewsResponse(
-    val articles: List<NewsArticle>
-)
 
 interface NewsApi {
     @GET("v2/everything")

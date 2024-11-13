@@ -17,6 +17,7 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onLoginClick: () -> Unit) {
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var balance by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     val scaffoldState = rememberScaffoldState()
     val coroutineScope = rememberCoroutineScope()
@@ -78,7 +79,8 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onLoginClick: () -> Unit) {
                                     if (userId != null) {
                                         val user = hashMapOf(
                                             "username" to username,
-                                            "email" to email
+                                            "email" to email,
+                                            "balance" to 0.0
                                         )
 
                                         firestore.collection("users").document(userId).set(user)
