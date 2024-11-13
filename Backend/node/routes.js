@@ -2,9 +2,7 @@ const express = require('express');
 const admin = require('./firebase');
 const bodyParser = require('body-parser');
 const db = admin.firestore();
-const { signInWithEmailAndPassword } = require('firebase/auth');
 const stripe = require('stripe')('sk_test_51QIBRoCd7KzAIIn8iJCQqCRhs6UgIe2A2pn00m2ATgYVN3gxqdHoUJ22Iq3gncDE7Ng6WpguWICaTzwT5JSohwbF00hEiKjG6f'); // Replace with your Stripe secret key
-const auth = admin.auth();
 
 const router = express.Router();
 
@@ -63,42 +61,38 @@ router.post("/auth/register", async (req, res) => {
 //Login
 
 router.post('/auth/login', async (req, res) => {
-    const { email, password } = req.body;
+    const { idToken } = req.body;
 
-    if (!email || !password) {
-        return res.status(400).send({ error: "Email and password are required." });
+    if (!idToken) {
+        return res.status(400).send({ error: "Missing idToken in request." });
     }
 
     try {
-        // Sign in user with Firebase Auth
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        // Verify the ID token using Firebase Admin SDK
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const { uid, email } = decodedToken;
 
-        // Fetch user data from Firestore using UID
-        const userDoc = await db.collection('users').doc(user.uid).get();
+        // Fetch user data from Firestore
+        const userDoc = await db.collection('users').doc(uid).get();
         if (!userDoc.exists) {
             return res.status(404).send({ error: "User not found in Firestore." });
         }
 
         const userData = userDoc.data();
 
-        // Return user data and Firebase ID token
-        const idToken = await user.getIdToken(); // Firebase ID token for secure client-server communication
         res.status(200).send({
             message: "Login successful",
             user: {
-                id: user.uid,
+                id: uid,
                 email: userData.email,
                 firstName: userData.firstName,
                 lastName: userData.lastName,
                 role: userData.role,
-                balance: userData.balance,
             },
-            token: idToken,
         });
     } catch (error) {
-        console.error("Error during login:", error.message);
-        res.status(401).send({ error: error.message });
+        console.error("Error verifying token:", error);
+        res.status(401).send({ error: "Unauthorized" });
     }
 });
 
