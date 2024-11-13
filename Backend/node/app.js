@@ -15,7 +15,7 @@ const app = express();
 
 
 app.use(cors({
-    origin: 'localhost:3000',
+    origin: 'https://storied-sable-131b97.netlify.app',
     methods: 'GET, POST, PUT, DELETE',
     allowedHeaders: 'Content-Type, Authorization',
     credentials: true,
