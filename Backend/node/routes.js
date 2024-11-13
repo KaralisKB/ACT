@@ -52,6 +52,8 @@ router.post("/auth/register", async (req, res) => {
         if (error.code === "permission-denied") {
             return res.status(403).send({ error: "Insufficient permissions to save user in Firestore." });
         }
+    }
+});
 
         // Catch-all for other errors
         
