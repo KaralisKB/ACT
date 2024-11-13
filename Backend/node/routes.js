@@ -15,30 +15,46 @@ const portfolioColletion = db.collection('portfolio');
 router.post("/auth/register", async (req, res) => {
     const { uid, email, firstName, lastName, role } = req.body;
 
+    // Validate incoming request
     if (!uid || !email || !firstName || !lastName) {
+        console.error("Missing required fields:", { uid, email, firstName, lastName, role });
         return res.status(400).send({ error: "Missing required fields." });
     }
 
     try {
         // Log incoming request for debugging
-        console.log("Registering user with details:", { uid, email, firstName, lastName });
+        console.log("Registering user with details:", { uid, email, firstName, lastName, role });
+
+        // Check if the user already exists in Firestore
+        const userDoc = await db.collection("users").doc(uid).get();
+        if (userDoc.exists) {
+            console.error("User with this UID already exists in Firestore:", uid);
+            return res.status(400).send({ error: "User already exists in Firestore." });
+        }
 
         // Add user details to Firestore
         await db.collection("users").doc(uid).set({
             email,
             firstName,
             lastName,
-            role: role || "user", // Default role if not provided
+            role: role || "admin", // Default role if not provided
             balance: 0,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
+        console.log("User successfully registered in Firestore:", uid);
         res.status(201).send({ message: "User registered successfully." });
     } catch (error) {
-        console.error("Error saving user to Firestore:", error.message);
-        res.status(500).send({ error: "Failed to save user data in Firestore." });
-    }
-});
+        // Log the error for debugging
+        console.error("Error saving user to Firestore:", error);
+
+        // Differentiate Firestore errors
+        if (error.code === "permission-denied") {
+            return res.status(403).send({ error: "Insufficient permissions to save user in Firestore." });
+        }
+
+        // Catch-all for other errors
+        
 
 
 //Login
