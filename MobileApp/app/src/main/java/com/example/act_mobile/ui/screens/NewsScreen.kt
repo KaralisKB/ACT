@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.rememberImagePainter
 import com.example.act_mobile.network.ApiClient
-import com.example.act_mobile.network.NewsArticle
+import com.example.act_mobile.ui.model.NewsArticle
 import kotlinx.coroutines.launch
 
 @Composable

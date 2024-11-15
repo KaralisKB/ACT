@@ -1,30 +1,23 @@
 package com.example.act_mobile.network
 
-import com.example.act_mobile.ui.network.StockApi
+import com.example.act_mobile.ui.network.NewsApi
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object ApiClient {
-    //   url for stock API
-    private val stockRetrofit by lazy {
-        Retrofit.Builder()
-            .baseUrl("https://act-production-5e24.up.railway.app")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-    }
 
-    val stockApi: StockApi by lazy {
-        stockRetrofit.create(StockApi::class.java)
-    }
-
-    // url for news
+    // Retrofit instance for News API
     private val newsRetrofit by lazy {
         Retrofit.Builder()
-            .baseUrl("https://newsapi.org/")
+            .baseUrl("https://newsapi.org/") // News API URL
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
 
+    // News API instance
     val newsApi: NewsApi by lazy {
         newsRetrofit.create(NewsApi::class.java)
     }
