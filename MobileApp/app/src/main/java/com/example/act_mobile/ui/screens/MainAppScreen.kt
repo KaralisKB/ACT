@@ -20,10 +20,10 @@ fun MainAppScreen(
 
 ) {
     var currentScreen by remember { mutableStateOf("home") }
-    var selectedStockDetail by remember { mutableStateOf<StockDetail?>(null) } // Track selected stock detail
+    var selectedStockDetail by remember { mutableStateOf<StockDetail?>(null) }
     val scaffoldState = rememberScaffoldState()
     val coroutineScope = rememberCoroutineScope()
-    var paymentAmount by remember { mutableStateOf<Int?>(null) } // State to hold payment amount
+    var paymentAmount by remember { mutableStateOf<Int?>(null) }
 
     // Firebase Firestore instance
     val firestore = FirebaseFirestore.getInstance()
@@ -43,10 +43,13 @@ fun MainAppScreen(
         }
     ) { paddingValues ->
         when {
-            selectedStockDetail != null -> { // Show StockDetailScreen if a stock is selected
+            selectedStockDetail != null -> {
                 StockDetailScreen(
                     stock = selectedStockDetail!!,
-                    onClose = { selectedStockDetail = null } // Close detail screen
+                    onClose = {
+                        selectedStockDetail = null
+                        currentScreen = if (currentScreen == "stockDetailFromWatchlist") "watchlist" else "trade"
+                    }
                 )
             }
 
@@ -62,12 +65,22 @@ fun MainAppScreen(
                     "trade" -> TradeMarketScreen(
                         modifier = modifier.padding(paddingValues),
                         onStockClick = { stock ->
-                            selectedStockDetail = stock // Set the selected stock to navigate to detail screen
-                        }
+                            selectedStockDetail = stock
+                        },
+                        onSearchClick = { },
+                        onWatchlistClick = { currentScreen = "watchlist" }
                     )
 
                     "portfolio" -> PortfolioScreen(modifier = modifier.padding(paddingValues))
                     "notifications" -> NotificationsScreen(modifier = modifier.padding(paddingValues))
+                    "watchlist" -> WatchlistScreen(
+                        onBack = { currentScreen = "trade" },
+                        onStockClick = { stock ->
+                            selectedStockDetail = stock
+                            currentScreen = "stockDetailFromWatchlist"
+                        }
+                    )
+
                 }
             }
         }

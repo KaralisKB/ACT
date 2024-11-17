@@ -9,26 +9,49 @@ data class PolygonResponse(
 
 )
 
+//data class StockDetail(
+//    val active: Boolean?,
+//    val address: Address?,
+//    val branding: Branding?,
+//    val cik: String?,
+//    @SerializedName("composite_figi") val compositeFigi: String?,
+//    @SerializedName("currency_name") val currency: String?,
+//    val description: String?,
+//    @SerializedName("market_cap") val marketCap: Double?,
+//    val name: String?,
+//    @SerializedName("primary_exchange") val primaryExchange: String?,
+//    val ticker: String?,
+//    val iconUrl: String? = branding?.iconUrl,
+//    val logoUrl: String? = branding?.logoUrl,
+//    val type: String?,
+//    var currentPrice: Double? = null,
+//    @SerializedName("o") val openPrice: Double?,
+//    @SerializedName("h") val highPrice: Double?,
+//    @SerializedName("l") val lowPrice: Double?,
+//    @SerializedName("v") val volume: Long?
+//)
+
+
 data class StockDetail(
-    val active: Boolean?,
-    val address: Address?,
-    val branding: Branding?,
-    val cik: String?,
-    @SerializedName("composite_figi") val compositeFigi: String?,
-    @SerializedName("currency_name") val currency: String?,
-    val description: String?,
-    @SerializedName("market_cap") val marketCap: Double?,
-    val name: String?,
-    @SerializedName("primary_exchange") val primaryExchange: String?,
-    val ticker: String?,
-    val iconUrl: String? = branding?.iconUrl,
-    val logoUrl: String? = branding?.logoUrl,
-    val type: String?,
+    val active: Boolean? = false,
+    val address: Address? = null,
+    val branding: Branding? = null,
+    val cik: String? = "",
+    @SerializedName("composite_figi") val compositeFigi: String? = "",
+    @SerializedName("currency_name") val currency: String? = "",
+    val description: String? = "",
+    @SerializedName("market_cap") val marketCap: Double? = 0.0,
+    val name: String? = "",
+    @SerializedName("primary_exchange") val primaryExchange: String? = "",
+    val ticker: String? = "",
+    val iconUrl: String? = null,
+    val logoUrl: String? = null,
+    val type: String? = "",
     var currentPrice: Double? = null,
-    @SerializedName("o") val openPrice: Double?,
-    @SerializedName("h") val highPrice: Double?,
-    @SerializedName("l") val lowPrice: Double?,
-    @SerializedName("v") val volume: Long?
+    @SerializedName("o") val openPrice: Double? = 0.0,
+    @SerializedName("h") val highPrice: Double? = 0.0,
+    @SerializedName("l") val lowPrice: Double? = 0.0,
+    @SerializedName("v") val volume: Long? = 0,
 )
 
 data class Address(

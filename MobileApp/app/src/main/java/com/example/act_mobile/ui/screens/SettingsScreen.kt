@@ -30,7 +30,7 @@ fun SettingsScreen(
     onEditUsernameClick: () -> Unit,
     onChangeEmailClick: () -> Unit,
     onChangePasswordClick: () -> Unit,
-    onDeleteAccountClick: (String, String) -> Unit,  // Now takes email and password
+    onDeleteAccountClick: (String, String) -> Unit,
     onNotificationsClick: () -> Unit,
     onPrivacyPreferencesClick: () -> Unit,
     onAppearanceClick: () -> Unit

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
@@ -40,7 +39,6 @@ class MainActivity : ComponentActivity() {
         auth = FirebaseAuth.getInstance()
         var profileImageUri by mutableStateOf<Uri?>(null)
 
-        // Google Sign-In configuration
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(getString(R.string.default_web_client_id))
             .requestEmail()
@@ -61,7 +59,7 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Profile picture picker launcher
+        // profile pic picker launcher
         val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             profileImageUri = uri
         }
@@ -69,7 +67,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             var currentScreen by remember { mutableStateOf(if (auth.currentUser == null) "welcome" else "home") }
             var username by remember { mutableStateOf(auth.currentUser?.displayName ?: auth.currentUser?.email ?: "Your Username") }
-            val currentBalance = remember { mutableStateOf(0.0) } // MutableState for currentBalance
+            val currentBalance = remember { mutableStateOf(0.0) }
 
             val userId = auth.currentUser?.uid
 
@@ -215,7 +213,7 @@ class MainActivity : ComponentActivity() {
 fun HomeWithDrawer(
     userId: String,
     profileImageUri: Uri?,
-    currentBalance: MutableState<Double>, // Make this a MutableState
+    currentBalance: MutableState<Double>,
     imagePickerLauncher: () -> Unit,
     onLogoutClick: () -> Unit,
     onSupportClick: () -> Unit,
@@ -232,7 +230,7 @@ fun HomeWithDrawer(
     // Firebase Firestore instance
     val firestore = FirebaseFirestore.getInstance()
 
-    // Fetch username and balance from Firestore
+    //  username and balance from Firestore
     LaunchedEffect(userId) {
         firestore.collection("users").document(userId).get()
             .addOnSuccessListener { document ->

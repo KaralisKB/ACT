@@ -9,13 +9,6 @@ import com.example.act_mobile.ui.model.PreviousCloseResponse
 import retrofit2.http.Path
 
 
-//interface PolygonApi {
-//    @GET("v3/reference/tickers")
-//    fun getStockDetails(
-//        @Query("ticker") ticker: String,
-//        @Query("apiKey") apiKey: String = "ZT6N7key2jS5_Jz4l6BrlRUIq_9Pknx6" // Replace with your API key
-//    ): Call<PolygonResponse>
-//}
 
 interface PolygonApi {
     @GET("v3/reference/tickers/{ticker}")

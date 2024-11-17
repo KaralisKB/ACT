@@ -49,26 +49,18 @@ android {
     }
 }
 dependencies {
-    // Core dependencies
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
-
-    // Material3 (use a specific version to avoid duplication)
-    implementation("androidx.compose.material3:material3:1.1.0") // Replace with the latest stable version
-
-    // Firebase dependencies
+    implementation("androidx.compose.material3:material3:1.1.0")
+    implementation ("androidx.compose.material:material-icons-extended:1.7.5")
     implementation(platform("com.google.firebase:firebase-bom:33.5.0"))
     implementation("com.google.firebase:firebase-auth:23.0.0")
     implementation("com.google.android.gms:play-services-auth:21.2.0")
     implementation("com.google.firebase:firebase-firestore:25.1.0")
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-functions-ktx")
-
-    // Networking dependencies (Retrofit)
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-
-    // Compose and UI dependencies
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.compose.ui)
     implementation(libs.compose.material)
@@ -77,21 +69,14 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation("androidx.compose.foundation:foundation:1.5.3")
     implementation("com.google.android.material:material:1.12.0")
-
-    // Permissions and image loading
     implementation("com.google.accompanist:accompanist-permissions:0.24.10-beta")
     implementation("io.coil-kt:coil-compose:2.0.0")
-
-    // Chart library and Stripe
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
     implementation("com.stripe:stripe-android:21.0.0")
     implementation("com.stripe:stripeterminal:3.10.0")
-
-    // Polygon.io library for stock data
     implementation("com.github.polygon-io:client-jvm:v5.1.2")
     implementation(libs.volley)
-
-    // Test dependencies
+    implementation(libs.androidx.espresso.core)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
