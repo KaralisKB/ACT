@@ -54,10 +54,6 @@ router.post("/auth/register", async (req, res) => {
     }
 });
 
-        // Catch-all for other errors
-        
-
-
 //Login
 
 router.post('/auth/login', async (req, res) => {
@@ -150,7 +146,7 @@ async function updateUserBalance(email, amount) {
         }
 
         // Get the user document reference
-        const userDoc = userQuerySnapshot.docs[0]; // Assuming email is unique
+        const userDoc = userQuerySnapshot.docs[0]; 
         const userRef = userDoc.ref;
 
         // Get current balance and update it
@@ -170,7 +166,7 @@ async function updateUserBalance(email, amount) {
 
 router.use(bodyParser.json());
 
-const endpointSecret = 'whsec_ZzpwcZDTquTdVspM4lGfKSUrKMn0WbR5'; // Replace with your webhook secret
+const endpointSecret = 'whsec_ZzpwcZDTquTdVspM4lGfKSUrKMn0WbR5'; 
 
 
 router.post('/webhook/', express.json({ type: 'application/json' }), async  (req, res) => {
@@ -183,8 +179,8 @@ router.post('/webhook/', express.json({ type: 'application/json' }), async  (req
 
             // Extract relevant details from the session
             const customerEmail = session.customer_details.email; // Customer's email
-            const amountPaid = session.amount_total / 100; // Total amount paid (in dollars, assuming USD)
-            const currency = session.currency; // Currency (e.g., "usd")
+            const amountPaid = session.amount_total / 100; 
+            const currency = session.currency; 
 
             console.log(`Payment completed: ${amountPaid} ${currency} from ${customerEmail}`);
 
