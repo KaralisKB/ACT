@@ -375,66 +375,26 @@ router.post("/buy", async (req, res) => {
       if (portfolioSnapshot.empty) {
         return res.status(200).json({
           portfolio: [],
-          totals: {
-            investedAmount: 0,
-            currentAmount: 0,
-            profitLoss: 0,
-          },
         });
       }
   
-      const portfolio = [];
-      let totalInvestedAmount = 0;
-      let totalCurrentAmount = 0;
-  
-      await Promise.all(
-        portfolioSnapshot.docs.map(async (doc) => {
-          try {
-            const stock = doc.data();
-            const response = await fetch(
-              `https://finnhub.io/api/v1/quote?symbol=${stock.symbol}&token=ce80b8aad3i4pjr4v2ggce80b8aad3i4pjr4v2h0`
-            );
-            const marketData = await response.json();
-  
-            const currentPrice = marketData.c || 0;
-            const investedAmount = stock.shares * stock.price;
-            const currentAmount = stock.shares * currentPrice;
-            const profitLoss = currentAmount - investedAmount;
-  
-            totalInvestedAmount += investedAmount;
-            totalCurrentAmount += currentAmount;
-  
-            portfolio.push({
-              id: doc.id,
-              name: stock.name,
-              symbol: stock.symbol,
-              shares: stock.shares,
-              averagePrice: stock.price,
-              currentPrice,
-              investedAmount,
-              currentAmount,
-              profitLoss,
-            });
-          } catch (err) {
-            console.error(`Error processing stock ${doc.id}:`, err.message);
-          }
-        })
-      );
-  
-      const totalProfitLoss = totalCurrentAmount - totalInvestedAmount;
-  
-      res.status(200).json({
-        portfolio,
-        totals: {
-          investedAmount: totalInvestedAmount,
-          currentAmount: totalCurrentAmount,
-          profitLoss: totalProfitLoss,
-        },
+      const portfolio = portfolioSnapshot.docs.map((doc) => {
+        const stock = doc.data();
+        return {
+          id: doc.id, // Document ID
+          name: stock.name,
+          symbol: stock.symbol,
+          shares: stock.shares,
+          averagePrice: stock.price,
+        };
       });
+  
+      res.status(200).json({ portfolio });
     } catch (error) {
       console.error('Error fetching portfolio:', error.message);
       res.status(500).json({ error: 'Internal server error.' });
     }
   });
+  
 
 module.exports = router;
