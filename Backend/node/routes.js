@@ -373,29 +373,28 @@ router.post("/buy", async (req, res) => {
       const portfolioSnapshot = await portfolioRef.get();
   
       if (portfolioSnapshot.empty) {
-        return res.status(200).json({
+        return res.status(404).json({
+          message: 'No portfolio found for this user.',
           portfolio: [],
-          message: "No portfolio found for this user.",
         });
       }
   
+      // Fetch portfolio data
       const portfolio = portfolioSnapshot.docs.map((doc) => {
         const stock = doc.data();
+  
         return {
-          id: doc.id, // Document ID
-          name: stock.name,
-          symbol: stock.symbol,
-          shares: stock.shares, // Quantity of shares
-          price: stock.price, // Average purchase price
+          id: doc.id, // Stock document ID
+          name: stock.name || 'Unknown', // Stock name
+          symbol: stock.symbol || 'N/A', // Stock symbol
+          quantity: stock.quantity || 0, // Number of shares
+          price: stock.averagePrice || 0, // Average purchase price
         };
       });
   
+      // Return portfolio data
       res.status(200).json({ portfolio });
-    } catch (error) {
-      console.error('Error fetching portfolio:', error.message);
-      res.status(500).json({ error: 'Internal server error.' });
-    }
-  });
+    } c
   
 
 module.exports = router;
