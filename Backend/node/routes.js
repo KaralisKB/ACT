@@ -375,6 +375,7 @@ router.post("/buy", async (req, res) => {
       if (portfolioSnapshot.empty) {
         return res.status(200).json({
           portfolio: [],
+          message: "No portfolio found for this user.",
         });
       }
   
@@ -384,8 +385,8 @@ router.post("/buy", async (req, res) => {
           id: doc.id, // Document ID
           name: stock.name,
           symbol: stock.symbol,
-          shares: stock.shares,
-          averagePrice: stock.price,
+          shares: stock.shares, // Quantity of shares
+          price: stock.price, // Average purchase price
         };
       });
   
