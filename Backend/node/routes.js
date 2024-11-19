@@ -368,55 +368,61 @@ router.post("/buy", async (req, res) => {
     const { userId } = req.params;
   
     try {
-  
-      // Access the user's Portfolio subcollection
+      const db = admin.firestore();
       const portfolioRef = db.collection('users').doc(userId).collection('Portfolio');
       const portfolioSnapshot = await portfolioRef.get();
   
       if (portfolioSnapshot.empty) {
-        return res.status(404).json({ error: 'Portfolio not found for this user.' });
+        return res.status(200).json({
+          portfolio: [],
+          totals: {
+            investedAmount: 0,
+            currentAmount: 0,
+            profitLoss: 0,
+          },
+        });
       }
   
       const portfolio = [];
       let totalInvestedAmount = 0;
       let totalCurrentAmount = 0;
   
-      // Fetch portfolio data and calculate totals
       await Promise.all(
         portfolioSnapshot.docs.map(async (doc) => {
-          const stock = doc.data();
+          try {
+            const stock = doc.data();
+            const response = await fetch(
+              `https://finnhub.io/api/v1/quote?symbol=${stock.symbol}&token=ce80b8aad3i4pjr4v2ggce80b8aad3i4pjr4v2h0`
+            );
+            const marketData = await response.json();
   
-          // Fetch the latest stock price using Finnhub API
-          const response = await fetch(
-            `https://finnhub.io/api/v1/quote?symbol=${stock.symbol}&token=ce80b8aad3i4pjr4v2ggce80b8aad3i4pjr4v2h0`
-          );
-          const marketData = await response.json();
+            const currentPrice = marketData.c || 0;
+            const investedAmount = stock.shares * stock.price;
+            const currentAmount = stock.shares * currentPrice;
+            const profitLoss = currentAmount - investedAmount;
   
-          const currentPrice = marketData.c || 0; // Current price of the stock
-          const investedAmount = stock.shares * stock.price; // Total invested amount
-          const currentAmount = stock.shares * currentPrice; // Current market value
-          const profitLoss = currentAmount - investedAmount; // Profit or loss
+            totalInvestedAmount += investedAmount;
+            totalCurrentAmount += currentAmount;
   
-          totalInvestedAmount += investedAmount;
-          totalCurrentAmount += currentAmount;
-  
-          portfolio.push({
-            id: doc.id, // Stock document ID
-            name: stock.name,
-            symbol: stock.symbol,
-            shares: stock.shares,
-            averagePrice: stock.price,
-            currentPrice,
-            investedAmount,
-            currentAmount,
-            profitLoss,
-          });
+            portfolio.push({
+              id: doc.id,
+              name: stock.name,
+              symbol: stock.symbol,
+              shares: stock.shares,
+              averagePrice: stock.price,
+              currentPrice,
+              investedAmount,
+              currentAmount,
+              profitLoss,
+            });
+          } catch (err) {
+            console.error(`Error processing stock ${doc.id}:`, err.message);
+          }
         })
       );
   
       const totalProfitLoss = totalCurrentAmount - totalInvestedAmount;
   
-      // Return portfolio data with totals and individual stock details
       res.status(200).json({
         portfolio,
         totals: {
