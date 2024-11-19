@@ -388,7 +388,7 @@ router.post("/buy", async (req, res) => {
   
           // Fetch the latest stock price using Finnhub API
           const response = await fetch(
-            `https://finnhub.io/api/v1/quote?symbol=${stock.symbol}}&token=ce80b8aad3i4pjr4v2ggce80b8aad3i4pjr4v2h0`
+            `https://finnhub.io/api/v1/quote?symbol=${stock.symbol}&token=ce80b8aad3i4pjr4v2ggce80b8aad3i4pjr4v2h0`
           );
           const marketData = await response.json();
   
