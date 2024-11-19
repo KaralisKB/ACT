@@ -364,79 +364,70 @@ router.post("/buy", async (req, res) => {
     }
   });
 
-  router.get("/portfolio/:userId", async (req, res) => {
+  router.get('/portfolio/:userId', async (req, res) => {
     const { userId } = req.params;
   
     try {
-      // Initialize Firestore
-      const db = admin.firestore();
   
-      // Fetch portfolio data for the user
-      const portfolioRef = db.collection("portfolio").where("userId", "==", userId);
-      const snapshot = await portfolioRef.get();
+      // Access the user's Portfolio subcollection
+      const portfolioRef = db.collection('users').doc(userId).collection('Portfolio');
+      const portfolioSnapshot = await portfolioRef.get();
   
-      if (snapshot.empty) {
-        return res.status(404).json({ message: "No portfolio found for this user." });
+      if (portfolioSnapshot.empty) {
+        return res.status(404).json({ error: 'Portfolio not found for this user.' });
       }
   
       const portfolio = [];
-      snapshot.forEach((doc) => {
-        portfolio.push({ id: doc.id, ...doc.data() });
-      });
+      let totalInvestedAmount = 0;
+      let totalCurrentAmount = 0;
   
-      // Fetch current stock prices for each stock in the portfolio
-      const portfolioWithPrices = await Promise.all(
-        portfolio.map(async (stock) => {
-          const apiURL = `https://finnhub.io/api/v1/quote?symbol=${stock.symbol}&token=ce80b8aad3i4pjr4v2ggce80b8aad3i4pjr4v2h0`;
+      // Fetch portfolio data and calculate totals
+      await Promise.all(
+        portfolioSnapshot.docs.map(async (doc) => {
+          const stock = doc.data();
   
-          try {
-            const stockData = await axios.get(apiURL);
-            const { c: currentPrice, o: open, h: high, l: low, pc: close } = stockData.data;
+          // Fetch the latest stock price using Finnhub API
+          const response = await fetch(
+            `https://finnhub.io/api/v1/quote?symbol=${stock.symbol}}&token=ce80b8aad3i4pjr4v2ggce80b8aad3i4pjr4v2h0`
+          );
+          const marketData = await response.json();
   
-            const investedAmount = stock.quantity * stock.averagePrice;
-            const currentAmount = stock.quantity * currentPrice;
-            const profitLoss = currentAmount - investedAmount;
+          const currentPrice = marketData.c || 0; // Current price of the stock
+          const investedAmount = stock.shares * stock.price; // Total invested amount
+          const currentAmount = stock.shares * currentPrice; // Current market value
+          const profitLoss = currentAmount - investedAmount; // Profit or loss
   
-            return {
-              id: stock.id,
-              name: stock.name,
-              symbol: stock.symbol,
-              quantity: stock.quantity,
-              averagePrice: stock.averagePrice,
-              investedAmount,
-              currentPrice,
-              currentAmount,
-              profitLoss,
-              open,
-              high,
-              low,
-              close,
-            };
-          } catch (err) {
-            console.error(`Error fetching market data for ${stock.symbol}:`, err.message);
-            return {
-              id: stock.id,
-              name: stock.name,
-              symbol: stock.symbol,
-              quantity: stock.quantity,
-              averagePrice: stock.averagePrice,
-              investedAmount: stock.quantity * stock.averagePrice,
-              currentPrice: null,
-              currentAmount: null,
-              profitLoss: null,
-              open: null,
-              high: null,
-              low: null,
-              close: null,
-            };
-          }
+          totalInvestedAmount += investedAmount;
+          totalCurrentAmount += currentAmount;
+  
+          portfolio.push({
+            id: doc.id, // Stock document ID
+            name: stock.name,
+            symbol: stock.symbol,
+            shares: stock.shares,
+            averagePrice: stock.price,
+            currentPrice,
+            investedAmount,
+            currentAmount,
+            profitLoss,
+          });
         })
       );
   
-      res.status(200).json(portfolioWithPrices);
-    } catch (err) {
-      console.error("Error fetching portfolio:", err.message);
-      res.status(500).json({ message: "Internal server error", error: err.message });
+      const totalProfitLoss = totalCurrentAmount - totalInvestedAmount;
+  
+      // Return portfolio data with totals and individual stock details
+      res.status(200).json({
+        portfolio,
+        totals: {
+          investedAmount: totalInvestedAmount,
+          currentAmount: totalCurrentAmount,
+          profitLoss: totalProfitLoss,
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching portfolio:', error.message);
+      res.status(500).json({ error: 'Internal server error.' });
     }
   });
 
