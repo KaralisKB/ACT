@@ -394,7 +394,11 @@ router.post("/buy", async (req, res) => {
   
       // Return portfolio data
       res.status(200).json({ portfolio });
-    } c
+    } catch (error) {
+      console.error('Error fetching portfolio:', error.message);
+      res.status(500).json({ error: 'Internal server error.' });
+    }
+  });
   
 
 module.exports = router;
