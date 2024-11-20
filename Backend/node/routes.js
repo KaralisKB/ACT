@@ -364,6 +364,60 @@ router.post("/buy", async (req, res) => {
     }
   });
 
+  // Sell Stock Endpoint
+router.post('/api/sell', async (req, res) => {
+    const { userId, symbol, name, quantity, price, totalEarnings } = req.body;
+  
+    if (!userId || !symbol || !quantity || !price) {
+      return res.status(400).json({ error: 'Missing required fields.' });
+    }
+  
+    try {
+      const userRef = db.collection('users').doc(userId);
+      const stockRef = userRef.collection('holdings').doc(symbol);
+  
+      // Fetch user's stock holdings
+      const stockDoc = await stockRef.get();
+      if (!stockDoc.exists) {
+        return res.status(404).json({ error: 'Stock not found in holdings.' });
+      }
+  
+      const currentStock = stockDoc.data();
+  
+      // Validate if the user has enough stock to sell
+      if (currentStock.quantity < quantity) {
+        return res.status(400).json({ error: 'Insufficient quantity to sell.' });
+      }
+  
+      // Add sell transaction
+      await userRef.collection('transactions').add({
+        type: 'SELL',
+        symbol,
+        name,
+        quantity,
+        price,
+        totalEarnings,
+        date: admin.firestore.Timestamp.now(),
+      });
+  
+      // Update holdings or delete stock if fully sold
+      if (currentStock.quantity === quantity) {
+        await stockRef.delete();
+      } else {
+        await stockRef.update({
+          quantity: admin.firestore.FieldValue.increment(-quantity),
+          totalCost: admin.firestore.FieldValue.increment(-totalEarnings),
+        });
+      }
+  
+      return res.json({ message: 'Stock sold successfully.' });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+  
+
   router.get('/portfolio/:userId', async (req, res) => {
     const { userId } = req.params;
   
