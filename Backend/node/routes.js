@@ -365,7 +365,7 @@ router.post("/buy", async (req, res) => {
   });
 
   // Sell Stock Endpoint
-router.post('/api/sell', async (req, res) => {
+router.post('/sell', async (req, res) => {
     const { userId, symbol, name, quantity, price, totalEarnings } = req.body;
   
     if (!userId || !symbol || !quantity || !price) {
