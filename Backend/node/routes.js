@@ -374,7 +374,7 @@ router.post('/sell', async (req, res) => {
   
     try {
       const userRef = db.collection('users').doc(userId);
-      const stockRef = userRef.collection('holdings').doc(symbol);
+      const stockRef = userRef.collection('portfolio').doc(symbol);
   
       // Fetch user's stock holdings
       const stockDoc = await stockRef.get();
