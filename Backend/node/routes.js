@@ -374,12 +374,12 @@ router.post('/sell', async (req, res) => {
   
     try {
       const userRef = db.collection('users').doc(userId);
-      const stockRef = userRef.collection('portfolio').doc(symbol);
+      const stockRef = userRef.collection('Portfolio').doc(symbol);
   
       // Fetch user's stock holdings
       const stockDoc = await stockRef.get();
       if (!stockDoc.exists) {
-        return res.status(404).json({ error: 'Stock not found in holdings.' });
+        return res.status(404).json({ error: 'Stock not found in Portfolio.' });
       }
   
       const currentStock = stockDoc.data();
@@ -390,7 +390,7 @@ router.post('/sell', async (req, res) => {
       }
   
       // Add sell transaction
-      await userRef.collection('transactions').add({
+      await userRef.collection('Transactions').add({
         type: 'SELL',
         symbol,
         name,
