@@ -365,57 +365,71 @@ router.post("/buy", async (req, res) => {
   });
 
   // Sell Stock Endpoint
-router.post('/sell', async (req, res) => {
+  router.post('/sell', async (req, res) => {
     const { userId, symbol, name, quantity, price, totalEarnings } = req.body;
-  
-    if (!userId || !symbol || !quantity || !price) {
-      return res.status(400).json({ error: 'Missing required fields.' });
+
+    if (!userId || !symbol || !quantity || !price || !totalEarnings) {
+        return res.status(400).json({ error: 'Missing required fields.' });
     }
-  
+
     try {
-      const userRef = db.collection('users').doc(userId);
-      const stockRef = userRef.collection('Portfolio').doc(symbol);
-  
-      // Fetch user's stock holdings
-      const stockDoc = await stockRef.get();
-      if (!stockDoc.exists) {
-        return res.status(404).json({ error: 'Stock not found in Portfolio.' });
-      }
-  
-      const currentStock = stockDoc.data();
-  
-      // Validate if the user has enough stock to sell
-      if (currentStock.quantity < quantity) {
-        return res.status(400).json({ error: 'Insufficient quantity to sell.' });
-      }
-  
-      // Add sell transaction
-      await userRef.collection('Transactions').add({
-        type: 'SELL',
-        symbol,
-        name,
-        quantity,
-        price,
-        totalEarnings,
-        date: admin.firestore.Timestamp.now(),
-      });
-  
-      // Update holdings or delete stock if fully sold
-      if (currentStock.quantity === quantity) {
-        await stockRef.delete();
-      } else {
-        await stockRef.update({
-          quantity: admin.firestore.FieldValue.increment(-quantity),
-          totalCost: admin.firestore.FieldValue.increment(-totalEarnings),
+        const userRef = db.collection('users').doc(userId);
+        const stockRef = userRef.collection('Portfolio').doc(symbol);
+
+        // Fetch user's stock holdings
+        const stockDoc = await stockRef.get();
+        if (!stockDoc.exists) {
+            return res.status(404).json({ error: 'Stock not found in Portfolio.' });
+        }
+
+        const currentStock = stockDoc.data();
+
+        // Validate if the user has enough stock to sell
+        if (currentStock.quantity < quantity) {
+            return res.status(400).json({ error: 'Insufficient quantity to sell.' });
+        }
+
+        // Add sell transaction
+        await userRef.collection('Transactions').add({
+            type: 'SELL',
+            symbol,
+            name,
+            quantity,
+            price,
+            totalEarnings,
+            date: admin.firestore.Timestamp.now(),
         });
-      }
-  
-      return res.json({ message: 'Stock sold successfully.' });
+
+        // Update holdings or delete stock if fully sold
+        if (currentStock.quantity === quantity) {
+            await stockRef.delete();
+        } else {
+            await stockRef.update({
+                quantity: admin.firestore.FieldValue.increment(-quantity),
+                totalCost: admin.firestore.FieldValue.increment(-totalEarnings),
+            });
+        }
+
+        // Fetch the user's current balance
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+
+        const userData = userDoc.data();
+        const updatedBalance = (userData.balance || 0) + totalEarnings;
+
+        // Update the user's balance
+        await userRef.update({
+            balance: updatedBalance,
+        });
+
+        return res.json({ message: 'Stock sold successfully.', newBalance: updatedBalance });
     } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: 'Internal Server Error' });
+        console.error(error);
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
-  });
+});
   
 
   router.get('/portfolio/:userId', async (req, res) => {
