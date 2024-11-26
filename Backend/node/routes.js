@@ -112,14 +112,24 @@ router.post('/balance/add', async (req, res) => {
 
 async function updateClientBalance(clientName, amount) {
   try {
-      // Find the client by name
+      // Fetch the currently logged-in user from localStorage
+      const user = JSON.parse(localStorage.getItem("user"));
+
+      if (!user?.id) {
+          console.error("Logged-in user ID is missing.");
+          return { success: false, message: "User ID is required to update the client's balance." };
+      }
+
+      // Get the specific client's subcollection under the current user
       const clientQuerySnapshot = await db
-          .collectionGroup('Clients')
+          .collection('users')
+          .doc(user.id) // Only query the logged-in user's "Clients" subcollection
+          .collection('Clients')
           .where('name', '==', clientName)
           .get();
 
       if (clientQuerySnapshot.empty) {
-          console.error(`Client with name "${clientName}" not found.`);
+          console.error(`Client with name "${clientName}" not found for user: ${user.id}.`);
           return { success: false, message: "Client not found in database." };
       }
 
