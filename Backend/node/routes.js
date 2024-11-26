@@ -160,28 +160,28 @@ router.post('/webhook/', express.json({ type: 'application/json' }), async (req,
       case 'checkout.session.completed':
           const session = event.data.object;
 
-          // Extract relevant details from the session
-          const customerName = session.metadata?.Name; // Name field passed as metadata
-          const amountPaid = session.amount_total / 100;
+          // Extract relevant details
+          const customerEmail = session.customer_details.email; // Customer's email
+          const amountPaid = session.amount_total / 100; // Stripe sends amount in cents
           const currency = session.currency;
 
-          console.log(`Payment completed: ${amountPaid} ${currency} from ${customerName}`);
+          console.log(`Payment completed: ${amountPaid} ${currency} from ${customerEmail}`);
 
           try {
-              // Update client balance using the Name field
-              if (customerName) {
-                  const result = await updateClientBalance(customerName, amountPaid);
+              // Extract the Name field from custom_fields
+              const nameField = session.custom_fields.find(field => field.key === 'name');
+              const clientName = nameField?.text?.value;
 
-                  if (result.success) {
-                      console.log(`Balance updated successfully for client with name ${customerName}`);
-                  } else {
-                      console.error(result.message);
-                  }
+              if (clientName) {
+                  // If Name is found, update the client's balance
+                  console.log(`Updating balance for client: ${clientName}`);
+                  await updateClientBalance(clientName, amountPaid);
               } else {
-                  console.error("Name field is missing in session metadata.");
+                  // If Name is not found, log an error
+                  console.error("Name field is missing in custom_fields.");
               }
           } catch (error) {
-              console.error(`Failed to update balance for client with name ${customerName}:`, error.message);
+              console.error(`Failed to update balance:`, error.message);
           }
 
           break;
@@ -193,6 +193,7 @@ router.post('/webhook/', express.json({ type: 'application/json' }), async (req,
   // Acknowledge receipt of the event
   res.status(200).json({ received: true });
 });
+
 
 router.post('/watchlist/add', async (req, res) => {
     const { userId, stockTicker } = req.body;
