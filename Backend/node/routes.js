@@ -292,20 +292,30 @@ router.get('/watchlist/:userId/:clientId', async (req, res) => {
 });
 
 router.delete('/watchlist/remove', async (req, res) => {
-    const { userId, stockTicker } = req.body;
+  const { userId, clientId, stockTicker } = req.body;
 
-    if (!userId || !stockTicker) {
-        return res.status(400).send({ error: "Missing required fields." });
-    }
+  // Validate required fields
+  if (!userId || !clientId || !stockTicker) {
+      return res.status(400).send({ error: "Missing required fields: userId, clientId, or stockTicker." });
+  }
 
-    try {
-        const userWatchlistRef = db.collection('users').doc(userId).collection('watchlist');
-        await userWatchlistRef.doc(stockTicker).delete();
-        res.status(200).send({ message: "Stock removed from watchlist." });
-    } catch (error) {
-        console.error("Error removing stock from watchlist:", error);
-        res.status(500).send({ error: "Failed to remove stock from watchlist." });
-    }
+  try {
+      // Reference to the client's watchlist subcollection
+      const clientWatchlistRef = db
+          .collection('users')
+          .doc(userId)
+          .collection('Clients')
+          .doc(clientId)
+          .collection('watchlist');
+
+      // Delete the specific stock
+      await clientWatchlistRef.doc(stockTicker).delete();
+
+      res.status(200).send({ message: "Stock removed from client's watchlist." });
+  } catch (error) {
+      console.error("Error removing stock from client's watchlist:", error);
+      res.status(500).send({ error: "Failed to remove stock from client's watchlist." });
+  }
 });
 
 router.get('/client/balance/:userId/:clientId', async (req, res) => {
