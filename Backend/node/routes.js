@@ -163,13 +163,16 @@ router.post('/webhook', express.json({ type: 'application/json' }), async (req, 
               // Extract email and payment amount
               const customerEmail = session.customer_details.email; // Email entered in payment form
               const amountPaid = session.amount_total / 100; // Stripe sends amounts in cents
-              const clientName = session.metadata?.name; // Extract client name from metadata
+
+              // Extract client name from custom_fields
+              const clientNameField = session.custom_fields?.find(field => field.key === 'name');
+              const clientName = clientNameField?.text?.value;
 
               console.log(`Payment completed: ${amountPaid} from ${customerEmail} for client ${clientName}`);
 
               if (!clientName) {
-                  console.error('Client name is missing in session metadata.');
-                  return res.status(400).json({ error: 'Client name is missing in session metadata.' });
+                  console.error('Client name is missing in custom fields.');
+                  return res.status(400).json({ error: 'Client name is missing in custom fields.' });
               }
 
               // Step 1: Find the user by email
