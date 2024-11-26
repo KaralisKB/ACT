@@ -236,28 +236,28 @@ router.post('/webhook', express.json({ type: 'application/json' }), async (req, 
 
 
 router.post('/watchlist/add', async (req, res) => {
-  const { userId, stockTicker, clientId } = req.body;
+  const { userId, clientId, stockTicker } = req.body;
 
-  if (!userId || !stockTicker || !clientId) {
-      return res.status(400).send({ error: "Missing required fields (userId, stockTicker, or clientId)." });
+  if (!userId || !clientId || !stockTicker) {
+      return res.status(400).send({ error: "Missing required fields." });
   }
 
   try {
-      // Reference the client's watchlist subcollection
-      const clientWatchlistRef = db
+      // Reference to the watchlist subcollection of the specific client
+      const watchlistRef = db
           .collection('users')
           .doc(userId)
           .collection('Clients')
           .doc(clientId)
           .collection('watchlist');
 
-      // Add the stock to the watchlist subcollection
-      await clientWatchlistRef.doc(stockTicker).set({ ticker: stockTicker });
+      // Add the stock to the watchlist
+      await watchlistRef.doc(stockTicker).set({ ticker: stockTicker });
 
       res.status(201).send({ message: "Stock added to the client's watchlist." });
   } catch (error) {
       console.error("Error adding stock to client's watchlist:", error);
-      res.status(500).send({ error: "Failed to add stock to client's watchlist." });
+      res.status(500).send({ error: "Failed to add stock to watchlist." });
   }
 });
 
