@@ -263,18 +263,32 @@ router.post('/watchlist/add', async (req, res) => {
   }
 });
 
-router.get('/watchlist/:userId', async (req, res) => {
-    const { userId } = req.params;
+router.get('/watchlist/:userId/:clientId', async (req, res) => {
+  const { userId, clientId } = req.params;
 
-    try {
-        const userWatchlistRef = db.collection('users').doc(userId).collection('watchlist');
-        const snapshot = await userWatchlistRef.get();
-        const watchlist = snapshot.docs.map(doc => doc.data());
-        res.status(200).send(watchlist);
-    } catch (error) {
-        console.error("Error fetching watchlist:", error);
-        res.status(500).send({ error: "Failed to fetch watchlist." });
-    }
+  if (!userId || !clientId) {
+      return res.status(400).send({ error: "User ID and Client ID are required." });
+  }
+
+  try {
+      // Reference the watchlist subcollection under the specific client
+      const clientWatchlistRef = db
+          .collection('users')
+          .doc(userId)
+          .collection('Clients')
+          .doc(clientId)
+          .collection('watchlist');
+
+      const snapshot = await clientWatchlistRef.get();
+
+      // Extract the data from the watchlist
+      const watchlist = snapshot.docs.map((doc) => doc.data());
+      
+      res.status(200).send(watchlist);
+  } catch (error) {
+      console.error("Error fetching client's watchlist:", error);
+      res.status(500).send({ error: "Failed to fetch client's watchlist." });
+  }
 });
 
 router.delete('/watchlist/remove', async (req, res) => {
