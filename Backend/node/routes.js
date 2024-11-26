@@ -110,76 +110,88 @@ router.post('/balance/add', async (req, res) => {
 });
 
 
-async function updateUserBalance(email, amount) {
-    try {
-        // Find the user by email
-        const userQuerySnapshot = await db.collection('users').where('email', '==', email).get();
+async function updateClientBalance(clientName, amount) {
+  try {
+      // Search for the client by name in the 'Clients' subcollection
+      const usersSnapshot = await db.collection('users').get();
 
-        if (userQuerySnapshot.empty) {
-            console.error(`User with email ${email} not found.`);
-            return { success: false, message: "User not found in database." };
-        }
+      let clientDocRef = null;
 
-        // Get the user document reference
-        const userDoc = userQuerySnapshot.docs[0]; 
-        const userRef = userDoc.ref;
+      usersSnapshot.forEach((userDoc) => {
+          const clientsRef = userDoc.ref.collection('Clients');
+          const clientQuerySnapshot = clientsRef.where('name', '==', clientName).get();
 
-        // Get current balance and update it
-        const currentBalance = userDoc.data().balance || 0;
-        const newBalance = currentBalance + amount;
+          clientQuerySnapshot.then((snapshot) => {
+              if (!snapshot.empty) {
+                  clientDocRef = snapshot.docs[0].ref; // Get the first matching client document reference
+              }
+          });
+      });
 
-        await userRef.update({ balance: newBalance });
+      if (!clientDocRef) {
+          console.error(`Client with name ${clientName} not found.`);
+          return { success: false, message: "Client not found in database." };
+      }
 
-        console.log(`Balance has been successfully updated for user with email ${email}. New Balance: ${newBalance}`);
-        return { success: true };
-    } catch (error) {
-        console.error(`Error updating balance for user with email ${email}:`, error.message);
-        throw error;
-    }
+      // Get the current balance of the client and update it
+      const clientDoc = await clientDocRef.get();
+      const currentBalance = clientDoc.data().balance || 0;
+      const newBalance = currentBalance + amount;
+
+      await clientDocRef.update({ balance: newBalance });
+
+      console.log(`Balance has been successfully updated for client with name ${clientName}. New Balance: ${newBalance}`);
+      return { success: true };
+  } catch (error) {
+      console.error(`Error updating balance for client with name ${clientName}:`, error.message);
+      throw error;
+  }
 }
-
 
 router.use(bodyParser.json());
 
-const endpointSecret = 'whsec_ZzpwcZDTquTdVspM4lGfKSUrKMn0WbR5'; 
+const endpointSecret = 'whsec_ZzpwcZDTquTdVspM4lGfKSUrKMn0WbR5';
 
+router.post('/webhook/', express.json({ type: 'application/json' }), async (req, res) => {
+  const event = req.body;
 
-router.post('/webhook/', express.json({ type: 'application/json' }), async  (req, res) => {
-    const event = req.body;
+  // Handle the event
+  switch (event.type) {
+      case 'checkout.session.completed':
+          const session = event.data.object;
 
-    // Handle the event
-    switch (event.type) {
-        case 'checkout.session.completed':
-            const session = event.data.object;
+          // Extract relevant details from the session
+          const customerName = session.metadata?.Name; // Name field passed as metadata
+          const amountPaid = session.amount_total / 100;
+          const currency = session.currency;
 
-            // Extract relevant details from the session
-            const customerEmail = session.customer_details.email; // Customer's email
-            const amountPaid = session.amount_total / 100; 
-            const currency = session.currency; 
+          console.log(`Payment completed: ${amountPaid} ${currency} from ${customerName}`);
 
-            console.log(`Payment completed: ${amountPaid} ${currency} from ${customerEmail}`);
+          try {
+              // Update client balance using the Name field
+              if (customerName) {
+                  const result = await updateClientBalance(customerName, amountPaid);
 
-            try {
-                // Update user balance using the email
-                const result = await updateUserBalance(customerEmail, amountPaid);
+                  if (result.success) {
+                      console.log(`Balance updated successfully for client with name ${customerName}`);
+                  } else {
+                      console.error(result.message);
+                  }
+              } else {
+                  console.error("Name field is missing in session metadata.");
+              }
+          } catch (error) {
+              console.error(`Failed to update balance for client with name ${customerName}:`, error.message);
+          }
 
-                if (result.success) {
-                    console.log(`Balance updated successfully for user with email ${customerEmail}`);
-                } else {
-                    console.error(result.message);
-                }
-            } catch (error) {
-                console.error(`Failed to update balance for user with email ${customerEmail}:`, error.message);
-            }
+          break;
 
-            break;
+      default:
+          console.log(`Unhandled event type: ${event.type}`);
+  }
 
-        default:
-            console.log(`Unhandled event type: ${event.type}`);
-    }
-
-    // Acknowledge receipt of the event
-    res.status(200).json({ received: true });
+  // Acknowledge receipt of the event
+  res.status(200).json({ received: true });
 });
 
 router.post('/watchlist/add', async (req, res) => {
