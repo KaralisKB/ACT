@@ -434,31 +434,44 @@ router.post("/buy", async (req, res) => {
 
   // Sell Stock Endpoint
   router.post('/sell', async (req, res) => {
-    const { userId, symbol, name, quantity, price, totalEarnings } = req.body;
+    const { userId, clientId, symbol, name, quantity, price, totalEarnings } = req.body;
 
-    if (!userId || !symbol || !quantity || !price || !totalEarnings) {
+    if (!userId || !clientId || !symbol || !quantity || !price || !totalEarnings) {
         return res.status(400).json({ error: 'Missing required fields.' });
     }
 
     try {
-        const userRef = db.collection('users').doc(userId);
-        const stockRef = userRef.collection('Portfolio').doc(symbol);
+        // Reference to the client's portfolio
+        const clientPortfolioRef = db
+            .collection('users')
+            .doc(userId)
+            .collection('Clients')
+            .doc(clientId)
+            .collection('Portfolio')
+            .doc(symbol);
 
-        // Fetch user's stock holdings
-        const stockDoc = await stockRef.get();
+        // Fetch the stock from the client's portfolio
+        const stockDoc = await clientPortfolioRef.get();
         if (!stockDoc.exists) {
             return res.status(404).json({ error: 'Stock not found in Portfolio.' });
         }
 
         const currentStock = stockDoc.data();
 
-        // Validate if the user has enough stock to sell
+        // Validate if the client has enough stock to sell
         if (currentStock.quantity < quantity) {
             return res.status(400).json({ error: 'Insufficient quantity to sell.' });
         }
 
-        // Add sell transaction
-        await userRef.collection('Transactions').add({
+        // Add a sell transaction to the client's Transactions subcollection
+        const clientTransactionsRef = db
+            .collection('users')
+            .doc(userId)
+            .collection('Clients')
+            .doc(clientId)
+            .collection('Transactions');
+
+        await clientTransactionsRef.add({
             type: 'SELL',
             symbol,
             name,
@@ -468,36 +481,40 @@ router.post("/buy", async (req, res) => {
             date: admin.firestore.Timestamp.now(),
         });
 
-        // Update holdings or delete stock if fully sold
+        // Update the client's portfolio
         if (currentStock.quantity === quantity) {
-            await stockRef.delete();
+            // Remove the stock entirely if fully sold
+            await clientPortfolioRef.delete();
         } else {
-            await stockRef.update({
+            // Update the stock quantity and total cost
+            await clientPortfolioRef.update({
                 quantity: admin.firestore.FieldValue.increment(-quantity),
                 totalCost: admin.firestore.FieldValue.increment(-totalEarnings),
             });
         }
 
-        // Fetch the user's current balance
-        const userDoc = await userRef.get();
-        if (!userDoc.exists) {
-            return res.status(404).json({ error: 'User not found.' });
+        // Update the client's balance
+        const clientRef = db.collection('users').doc(userId).collection('Clients').doc(clientId);
+        const clientDoc = await clientRef.get();
+
+        if (!clientDoc.exists) {
+            return res.status(404).json({ error: 'Client not found.' });
         }
 
-        const userData = userDoc.data();
-        const updatedBalance = (userData.balance || 0) + totalEarnings;
+        const clientData = clientDoc.data();
+        const updatedBalance = (clientData.balance || 0) + totalEarnings;
 
-        // Update the user's balance
-        await userRef.update({
+        await clientRef.update({
             balance: updatedBalance,
         });
 
         return res.json({ message: 'Stock sold successfully.', newBalance: updatedBalance });
     } catch (error) {
-        console.error(error);
+        console.error("Error processing sell transaction:", error);
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 });
+
   
 
   router.get('/portfolio/:userId', async (req, res) => {
