@@ -455,18 +455,28 @@ router.post("/buy", async (req, res) => {
     }
   });
 
-  router.post('/clients/add', async (req, res) => {
-    const { userId, clientName } = req.body;
+  router.post('/clients/add/:userId', async (req, res) => {
+    const { userId } = req.params; // Extract userId from the URL path
+    const { clientName } = req.body; // Extract clientName from the request body
+  
+    if (!userId || !clientName) {
+      return res.status(400).json({ error: 'Missing userId or clientName.' });
+    }
+  
     try {
       const clientRef = db.collection('users').doc(userId).collection('Clients').doc();
       const newClient = { name: clientName };
+  
       await clientRef.set(newClient);
-      res.status(201).json({ newClient: { id: clientRef.id, ...newClient } });
+  
+      res.status(201).json({
+        message: 'Client added successfully.',
+        newClient: { id: clientRef.id, ...newClient },
+      });
     } catch (error) {
       console.error('Error adding client:', error.message);
       res.status(500).json({ error: 'Failed to add client.' });
     }
   });
-  
 
 module.exports = router;
