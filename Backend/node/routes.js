@@ -349,88 +349,88 @@ router.get('/client/balance/:userId/:clientId', async (req, res) => {
 });
 
 router.post("/buy", async (req, res) => {
-    const { userId, symbol, name, quantity, price, totalCost } = req.body;
-  
-    // Check if required fields are provided
-    if (!userId || !symbol || !quantity || !price || !totalCost) {
+  const { userId, clientId, symbol, name, quantity, price, totalCost } = req.body;
+
+  // Check if required fields are provided
+  if (!userId || !clientId || !symbol || !quantity || !price || !totalCost) {
       return res.status(400).json({ error: "Missing required fields in payload." });
-    }
-  
-    const db = admin.firestore();
-  
-    try {
-      // Get the user document from Firestore
-      const userRef = db.collection("users").doc(userId);
-      const userSnapshot = await userRef.get();
-  
-      if (!userSnapshot.exists) {
-        return res.status(404).json({ error: "User not found." });
+  }
+
+  const db = admin.firestore();
+
+  try {
+      // Get the client document from Firestore
+      const clientRef = db.collection("users").doc(userId).collection("Clients").doc(clientId);
+      const clientSnapshot = await clientRef.get();
+
+      if (!clientSnapshot.exists) {
+          return res.status(404).json({ error: "Client not found." });
       }
-  
-      const userData = userSnapshot.data();
-  
-      // Check if user has enough balance
-      if (userData.balance < totalCost) {
-        return res.status(400).json({ error: "Insufficient balance." });
+
+      const clientData = clientSnapshot.data();
+
+      // Check if the client has enough balance
+      if (clientData.balance < totalCost) {
+          return res.status(400).json({ error: "Insufficient balance." });
       }
-  
-      // Deduct the total cost from the user's balance
-      const newBalance = userData.balance - totalCost;
-      await userRef.update({ balance: newBalance });
-  
-      // Add the transaction to the user's "Transactions" subcollection
+
+      // Deduct the total cost from the client's balance
+      const newBalance = clientData.balance - totalCost;
+      await clientRef.update({ balance: newBalance });
+
+      // Add the transaction to the client's "Transactions" subcollection
       const transactionData = {
-        symbol,
-        name,
-        quantity,
-        price,
-        totalCost,
-        type: "BUY", // Specify the type of transaction
-        date: admin.firestore.FieldValue.serverTimestamp(),
-      };
-  
-      await db.collection("users").doc(userId).collection("Transactions").add(transactionData);
-  
-      // Add the stock to the user's "Portfolio" subcollection
-      const portfolioRef = db.collection("users").doc(userId).collection("Portfolio").doc(symbol);
-      const portfolioSnapshot = await portfolioRef.get();
-  
-      if (portfolioSnapshot.exists) {
-        // If the stock already exists in the portfolio, update its quantity
-        const existingData = portfolioSnapshot.data();
-        const newQuantity = existingData.quantity + quantity;
-  
-        await portfolioRef.update({
-          quantity: newQuantity,
-          averagePrice: ((existingData.quantity * existingData.averagePrice) + (quantity * price)) / newQuantity,
-        });
-      } else {
-        // If the stock does not exist, add it as a new entry
-        const portfolioData = {
-          name,
           symbol,
+          name,
           quantity,
-          averagePrice: price,
-        };
-  
-        await portfolioRef.set(portfolioData);
+          price,
+          totalCost,
+          type: "BUY", // Specify the type of transaction
+          date: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      await clientRef.collection("Transactions").add(transactionData);
+
+      // Add the stock to the client's "Portfolio" subcollection
+      const portfolioRef = clientRef.collection("Portfolio").doc(symbol);
+      const portfolioSnapshot = await portfolioRef.get();
+
+      if (portfolioSnapshot.exists) {
+          // If the stock already exists in the portfolio, update its quantity and average price
+          const existingData = portfolioSnapshot.data();
+          const newQuantity = existingData.quantity + quantity;
+
+          await portfolioRef.update({
+              quantity: newQuantity,
+              averagePrice: ((existingData.quantity * existingData.averagePrice) + (quantity * price)) / newQuantity,
+          });
+      } else {
+          // If the stock does not exist, add it as a new entry
+          const portfolioData = {
+              name,
+              symbol,
+              quantity,
+              averagePrice: price,
+          };
+
+          await portfolioRef.set(portfolioData);
       }
-  
+
       // Respond with success
       res.status(200).json({
-        message: "Stock purchase successful.",
-        newBalance,
-        portfolio: {
-          symbol,
-          quantity,
-          averagePrice: price,
-        },
+          message: "Stock purchase successful.",
+          newBalance,
+          portfolio: {
+              symbol,
+              quantity,
+              averagePrice: price,
+          },
       });
-    } catch (error) {
+  } catch (error) {
       console.error("Error processing buy transaction:", error);
       res.status(500).json({ error: "Failed to process the buy transaction." });
-    }
-  });
+  }
+});
 
   // Sell Stock Endpoint
   router.post('/sell', async (req, res) => {
