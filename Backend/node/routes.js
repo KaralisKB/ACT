@@ -110,26 +110,23 @@ router.post('/balance/add', async (req, res) => {
 });
 
 
-async function updateClientBalance(clientName, amount) {
+async function updateClientBalance(userId, clientName, amount) {
   try {
-      // Fetch the currently logged-in user from localStorage
-      const user = JSON.parse(localStorage.getItem("user"));
-
-      if (!user?.id) {
-          console.error("Logged-in user ID is missing.");
-          return { success: false, message: "User ID is required to update the client's balance." };
+      if (!userId || !clientName) {
+          console.error("User ID or Client Name is missing.");
+          return { success: false, message: "User ID and Client Name are required to update the client's balance." };
       }
 
-      // Get the specific client's subcollection under the current user
+      // Get the specific client's subcollection under the given user
       const clientQuerySnapshot = await db
           .collection('users')
-          .doc(user.id) // Only query the logged-in user's "Clients" subcollection
+          .doc(userId) // Use the provided userId instead of localStorage
           .collection('Clients')
           .where('name', '==', clientName)
           .get();
 
       if (clientQuerySnapshot.empty) {
-          console.error(`Client with name "${clientName}" not found for user: ${user.id}.`);
+          console.error(`Client with name "${clientName}" not found for user: ${userId}.`);
           return { success: false, message: "Client not found in database." };
       }
 
@@ -158,33 +155,34 @@ const endpointSecret = 'whsec_ZzpwcZDTquTdVspM4lGfKSUrKMn0WbR5';
 router.post('/webhook/', express.json({ type: 'application/json' }), async (req, res) => {
   const event = req.body;
 
-  // Handle the event
   switch (event.type) {
       case 'checkout.session.completed':
           const session = event.data.object;
 
-          // Extract relevant details
-          const customerEmail = session.customer_details.email; // Customer's email
-          const amountPaid = session.amount_total / 100; // Stripe sends amount in cents
-          const currency = session.currency;
+          // Extract relevant details from the session
+          const customerName = session.custom_fields[0]?.text?.value || "Unknown";
+          const userId = session.metadata?.userId; // Ensure userId is added in metadata
+          const amountPaid = session.amount_total / 100; // Convert to proper currency format
 
-          console.log(`Payment completed: ${amountPaid} ${currency} from ${customerEmail}`);
+          if (!userId) {
+              console.error("User ID is missing in session metadata.");
+              break;
+          }
+
+          console.log(`Payment completed: ${amountPaid} ${session.currency} from ${session.customer_details.email}`);
+          console.log(`Updating balance for client: ${customerName}`);
 
           try {
-              // Extract the Name field from custom_fields
-              const nameField = session.custom_fields.find(field => field.key === 'name');
-              const clientName = nameField?.text?.value;
+              // Update client balance using userId and clientName
+              const result = await updateClientBalance(userId, customerName, amountPaid);
 
-              if (clientName) {
-                  // If Name is found, update the client's balance
-                  console.log(`Updating balance for client: ${clientName}`);
-                  await updateClientBalance(clientName, amountPaid);
+              if (result.success) {
+                  console.log(`Balance updated successfully for client: ${customerName}`);
               } else {
-                  // If Name is not found, log an error
-                  console.error("Name field is missing in custom_fields.");
+                  console.error(result.message);
               }
           } catch (error) {
-              console.error(`Failed to update balance:`, error.message);
+              console.error(`Failed to update balance for client: ${customerName}`, error.message);
           }
 
           break;
