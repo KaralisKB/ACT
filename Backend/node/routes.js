@@ -243,20 +243,22 @@ router.post('/watchlist/add', async (req, res) => {
   }
 
   try {
-      // Reference to the watchlist subcollection of the specific client
-      const watchlistRef = db
-          .collection('users')
-          .doc(userId)
-          .collection('Clients')
-          .doc(clientId)
-          .collection('watchlist');
+      // Reference the specific client document
+      const clientRef = db.collection('users').doc(userId).collection('Clients').doc(clientId);
 
-      // Add the stock to the watchlist
+      // Check if the client exists
+      const clientDoc = await clientRef.get();
+      if (!clientDoc.exists) {
+          return res.status(404).send({ error: "Client not found." });
+      }
+
+      // Add the stock to the watchlist subcollection
+      const watchlistRef = clientRef.collection('watchlist');
       await watchlistRef.doc(stockTicker).set({ ticker: stockTicker });
 
-      res.status(201).send({ message: "Stock added to the client's watchlist." });
+      res.status(201).send({ message: "Stock added to client's watchlist." });
   } catch (error) {
-      console.error("Error adding stock to client's watchlist:", error);
+      console.error("Error adding stock to watchlist:", error);
       res.status(500).send({ error: "Failed to add stock to watchlist." });
   }
 });
