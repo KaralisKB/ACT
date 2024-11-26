@@ -230,28 +230,33 @@ router.delete('/watchlist/remove', async (req, res) => {
     }
 });
 
-router.get('/user/balance/:userId', async (req, res) => {
-    const { userId } = req.params;
+router.get('/client/balance/:userId/:clientId', async (req, res) => {
+    const { userId, clientId } = req.params;
 
-    if (!userId) {
-        return res.status(400).json({ error: "User ID is required." });
+    if (!userId || !clientId) {
+        return res.status(400).json({ error: "User ID and Client ID are required." });
     }
 
     try {
-        // Fetch user document from Firestore
-        const userDoc = await db.collection('users').doc(userId).get();
+        // Fetch client document from Firestore
+        const clientDoc = await db
+            .collection('users')
+            .doc(userId)
+            .collection('Clients')
+            .doc(clientId)
+            .get();
 
-        if (!userDoc.exists) {
-            return res.status(404).json({ error: "User not found." });
+        if (!clientDoc.exists) {
+            return res.status(404).json({ error: "Client not found." });
         }
 
-        const userData = userDoc.data();
-        const userBalance = userData.balance || 0; // Default to 0 if balance is not defined
+        const clientData = clientDoc.data();
+        const clientBalance = clientData.balance || 0; // Default to 0 if balance is not defined
 
-        res.status(200).json({ balance: userBalance });
+        res.status(200).json({ balance: clientBalance });
     } catch (error) {
-        console.error("Error fetching user balance:", error);
-        res.status(500).json({ error: "Failed to fetch user balance." });
+        console.error("Error fetching client balance:", error);
+        res.status(500).json({ error: "Failed to fetch client balance." });
     }
 });
 
@@ -465,7 +470,7 @@ router.post("/buy", async (req, res) => {
   
     try {
       const clientRef = db.collection('users').doc(userId).collection('Clients').doc();
-      const newClient = { name: clientName };
+      const newClient = { name: clientName, balance: 1.99 /*signup bonus */};
   
       await clientRef.set(newClient);
   
