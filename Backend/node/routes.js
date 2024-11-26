@@ -152,82 +152,85 @@ router.use(bodyParser.json());
 
 const endpointSecret = 'whsec_ZzpwcZDTquTdVspM4lGfKSUrKMn0WbR5';
 
-router.post('/webhook', express.json({ type: 'application/json' }), async (req, res) => {
+router.post('/webhook', express.json({ type: 'application/json' }), async (req, res) => { 
   const event = req.body;
 
   try {
-      switch (event.type) {
-          case 'checkout.session.completed': {
-              const session = event.data.object;
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
 
-              // Extract email and payment amount
-              const customerEmail = session.customer_details.email; // Email entered in payment form
-              const amountPaid = session.amount_total / 100; // Stripe sends amounts in cents
+        // Extract email and payment amount
+        const customerEmail = session.customer_details.email; // Email entered in payment form
+        const amountPaid = session.amount_total / 100; // Stripe sends amounts in cents
 
-              // Extract client name from custom_fields
-              const clientNameField = session.custom_fields?.find(field => field.key === 'Client Name');
-              const clientName = clientNameField?.text?.value;
+        // Extract client name from custom_fields by matching the label
+        let clientName = null;
+        if (session.custom_fields && Array.isArray(session.custom_fields)) {
+          const clientField = session.custom_fields.find(field => field.label?.custom === 'Client Name');
+          clientName = clientField?.text?.value;
+        }
 
-              console.log(`Payment completed: ${amountPaid} from ${customerEmail} for client ${clientName}`);
+        console.log(`Payment completed: ${amountPaid} from ${customerEmail} for client ${clientName}`);
 
-              if (!clientName) {
-                  console.error('Client name is missing in custom fields.');
-                  return res.status(400).json({ error: 'Client name is missing in custom fields.' });
-              }
+        if (!clientName) {
+          console.error('Client name is missing in custom fields.');
+          return res.status(400).json({ error: 'Client name is missing in custom fields.' });
+        }
 
-              // Step 1: Find the user by email
-              const userQuerySnapshot = await db.collection('users').where('email', '==', customerEmail).get();
+        // Step 1: Find the user by email
+        const userQuerySnapshot = await db.collection('users').where('email', '==', customerEmail).get();
 
-              if (userQuerySnapshot.empty) {
-                  console.error(`User with email ${customerEmail} not found.`);
-                  return res.status(404).json({ error: 'User not found in database.' });
-              }
+        if (userQuerySnapshot.empty) {
+          console.error(`User with email ${customerEmail} not found.`);
+          return res.status(404).json({ error: 'User not found in database.' });
+        }
 
-              // Step 2: Get the user's client list
-              const userDoc = userQuerySnapshot.docs[0];
-              const userId = userDoc.id;
-              const clientsRef = db.collection('users').doc(userId).collection('Clients');
-              const clientsSnapshot = await clientsRef.get();
+        // Step 2: Get the user's client list
+        const userDoc = userQuerySnapshot.docs[0];
+        const userId = userDoc.id;
+        const clientsRef = db.collection('users').doc(userId).collection('Clients');
+        const clientsSnapshot = await clientsRef.get();
 
-              if (clientsSnapshot.empty) {
-                  console.error(`No clients found for user with email ${customerEmail}.`);
-                  return res.status(404).json({ error: 'No clients found for user.' });
-              }
+        if (clientsSnapshot.empty) {
+          console.error(`No clients found for user with email ${customerEmail}.`);
+          return res.status(404).json({ error: 'No clients found for user.' });
+        }
 
-              // Step 3: Find the matching client
-              let matchedClient = null;
-              clientsSnapshot.forEach((doc) => {
-                  const client = doc.data();
-                  if (client.name.toLowerCase() === clientName.toLowerCase()) {
-                      matchedClient = { id: doc.id, ...client };
-                  }
-              });
-
-              if (!matchedClient) {
-                  console.error(`Client with name ${clientName} not found for user ${customerEmail}.`);
-                  return res.status(404).json({ error: `Client ${clientName} not found for user.` });
-              }
-
-              // Step 4: Update the client's balance
-              const clientRef = clientsRef.doc(matchedClient.id);
-              const currentBalance = matchedClient.balance || 0;
-              const newBalance = currentBalance + amountPaid;
-
-              await clientRef.update({ balance: newBalance });
-
-              console.log(`Balance updated successfully for client ${clientName}. New Balance: ${newBalance}`);
-
-              res.status(200).json({ message: 'Balance updated successfully.' });
-              break;
+        // Step 3: Find the matching client
+        let matchedClient = null;
+        clientsSnapshot.forEach((doc) => {
+          const client = doc.data();
+          if (client.name.toLowerCase() === clientName.toLowerCase()) {
+            matchedClient = { id: doc.id, ...client };
           }
+        });
 
-          default:
-              console.log(`Unhandled event type: ${event.type}`);
-              res.status(400).end();
+        if (!matchedClient) {
+          console.error(`Client with name ${clientName} not found for user ${customerEmail}.`);
+          return res.status(404).json({ error: `Client ${clientName} not found for user.` });
+        }
+
+        // Step 4: Update the client's balance
+        const clientRef = clientsRef.doc(matchedClient.id);
+        const currentBalance = matchedClient.balance || 0;
+        const newBalance = currentBalance + amountPaid;
+
+        await clientRef.update({ balance: newBalance });
+
+        console.log(`Balance updated successfully for client ${clientName}. New Balance: ${newBalance}`);
+
+        res.status(200).json({ message: 'Balance updated successfully.' });
+        break;
       }
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+        res.status(400).end();
+    }
   } catch (error) {
-      console.error('Error processing webhook:', error.message);
-      res.status(500).json({ error: 'Webhook processing failed.' });
+    console.error('Error processing webhook:', error.message);
+    res.status(500).json({ error: 'Webhook processing failed.' });
   }
 });
 
