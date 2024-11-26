@@ -92,31 +92,6 @@ router.post('/auth/login', async (req, res) => {
     }
 });
 
-// Create a new portfolio 
-router.post('/portfolios', async (req, res) => {
-    const { clientID, value } = req.body;
-
-    try {
-        const portfolioData = {
-            assets: [],
-            value,
-            lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
-        };
-
-        if (clientID) {
-            portfolioData.clientID = clientID
-        }
-        
-
-        const newPortfolioAdd = portfolioColletion.doc();
-        await newPortfolioAdd.set(portfolioData);
-
-        res.status(201).json({ message: 'Portfolio created', portfolioID: newPortfolioAdd.id});
-    }catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // Add Balance to user
 router.post('/balance/add', async (req, res) => {
     const { clientID, moneyAmount } = req.body;
@@ -465,6 +440,31 @@ router.post("/buy", async (req, res) => {
     } catch (error) {
       console.error('Error fetching portfolio:', error.message);
       res.status(500).json({ error: 'Internal server error.' });
+    }
+  });
+
+  router.get('/clients/:userId', async (req, res) => {
+    const { userId } = req.params;
+    try {
+      const clientsSnapshot = await db.collection('users').doc(userId).collection('Clients').get();
+      const clients = clientsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      res.status(200).json({ clients });
+    } catch (error) {
+      console.error('Error fetching clients:', error.message);
+      res.status(500).json({ error: 'Failed to fetch clients.' });
+    }
+  });
+
+  router.post('/clients/add', async (req, res) => {
+    const { userId, clientName } = req.body;
+    try {
+      const clientRef = db.collection('users').doc(userId).collection('Clients').doc();
+      const newClient = { name: clientName };
+      await clientRef.set(newClient);
+      res.status(201).json({ newClient: { id: clientRef.id, ...newClient } });
+    } catch (error) {
+      console.error('Error adding client:', error.message);
+      res.status(500).json({ error: 'Failed to add client.' });
     }
   });
   
