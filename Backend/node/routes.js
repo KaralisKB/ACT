@@ -112,38 +112,31 @@ router.post('/balance/add', async (req, res) => {
 
 async function updateClientBalance(clientName, amount) {
   try {
-      // Search for the client by name in the 'Clients' subcollection
-      const usersSnapshot = await db.collection('users').get();
+      // Find the client by name
+      const clientQuerySnapshot = await db
+          .collectionGroup('Clients')
+          .where('name', '==', clientName)
+          .get();
 
-      let clientDocRef = null;
-
-      usersSnapshot.forEach((userDoc) => {
-          const clientsRef = userDoc.ref.collection('Clients');
-          const clientQuerySnapshot = clientsRef.where('name', '==', clientName).get();
-
-          clientQuerySnapshot.then((snapshot) => {
-              if (!snapshot.empty) {
-                  clientDocRef = snapshot.docs[0].ref; // Get the first matching client document reference
-              }
-          });
-      });
-
-      if (!clientDocRef) {
-          console.error(`Client with name ${clientName} not found.`);
+      if (clientQuerySnapshot.empty) {
+          console.error(`Client with name "${clientName}" not found.`);
           return { success: false, message: "Client not found in database." };
       }
 
-      // Get the current balance of the client and update it
-      const clientDoc = await clientDocRef.get();
+      // Get the client document reference
+      const clientDoc = clientQuerySnapshot.docs[0];
+      const clientRef = clientDoc.ref;
+
+      // Get current balance and update it
       const currentBalance = clientDoc.data().balance || 0;
       const newBalance = currentBalance + amount;
 
-      await clientDocRef.update({ balance: newBalance });
+      await clientRef.update({ balance: newBalance });
 
-      console.log(`Balance has been successfully updated for client with name ${clientName}. New Balance: ${newBalance}`);
+      console.log(`Balance updated successfully for client: ${clientName}. New Balance: ${newBalance}`);
       return { success: true };
   } catch (error) {
-      console.error(`Error updating balance for client with name ${clientName}:`, error.message);
+      console.error(`Error updating balance for client: ${clientName}`, error.message);
       throw error;
   }
 }
