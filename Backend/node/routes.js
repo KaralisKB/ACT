@@ -165,7 +165,7 @@ router.post('/webhook', express.json({ type: 'application/json' }), async (req, 
               const amountPaid = session.amount_total / 100; // Stripe sends amounts in cents
 
               // Extract client name from custom_fields
-              const clientNameField = session.custom_fields?.find(field => field.key === 'client name');
+              const clientNameField = session.custom_fields?.find(field => field.key === 'Client Name');
               const clientName = clientNameField?.text?.value;
 
               console.log(`Payment completed: ${amountPaid} from ${customerEmail} for client ${clientName}`);
