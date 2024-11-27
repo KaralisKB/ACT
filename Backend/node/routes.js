@@ -517,41 +517,50 @@ router.post("/buy", async (req, res) => {
 
   
 
-  router.get('/portfolio/:userId', async (req, res) => {
-    const { userId } = req.params;
-  
-    try {
+router.get('/portfolio/:userId/:clientId', async (req, res) => {
+  const { userId, clientId } = req.params;
+
+  try {
       const db = admin.firestore();
-      const portfolioRef = db.collection('users').doc(userId).collection('Portfolio');
+
+      // Reference to the client's portfolio subcollection
+      const portfolioRef = db
+          .collection('users')
+          .doc(userId)
+          .collection('Clients')
+          .doc(clientId)
+          .collection('Portfolio');
+
+      // Fetch the portfolio data
       const portfolioSnapshot = await portfolioRef.get();
-  
+
       if (portfolioSnapshot.empty) {
-        return res.status(404).json({
-          message: 'No portfolio found for this user.',
-          portfolio: [],
-        });
+          return res.status(404).json({
+              message: 'No portfolio found for this client.',
+              portfolio: [],
+          });
       }
-  
-      // Fetch portfolio data
+
+      // Map through portfolio documents and extract data
       const portfolio = portfolioSnapshot.docs.map((doc) => {
-        const stock = doc.data();
-  
-        return {
-          id: doc.id, // Stock document ID
-          name: stock.name || 'Unknown', // Stock name
-          symbol: stock.symbol || 'N/A', // Stock symbol
-          quantity: stock.quantity || 0, // Number of shares
-          price: stock.averagePrice || 0, // Average purchase price
-        };
+          const stock = doc.data();
+
+          return {
+              id: doc.id, // Stock document ID
+              name: stock.name || 'Unknown', // Stock name
+              symbol: stock.symbol || 'N/A', // Stock symbol
+              quantity: stock.quantity || 0, // Number of shares
+              price: stock.averagePrice || 0, // Average purchase price
+          };
       });
-  
+
       // Return portfolio data
       res.status(200).json({ portfolio });
-    } catch (error) {
+  } catch (error) {
       console.error('Error fetching portfolio:', error.message);
       res.status(500).json({ error: 'Internal server error.' });
-    }
-  });
+  }
+});
 
   router.get('/clients/:userId', async (req, res) => {
     const { userId } = req.params;
