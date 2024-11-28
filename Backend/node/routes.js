@@ -148,6 +148,34 @@ async function updateClientBalance(userId, clientName, amount) {
   }
 }
 
+async function updateUserBalance(email, amount) {
+    try {
+        // Find the user by email
+        const userQuerySnapshot = await db.collection('users').where('email', '==', email).get();
+
+        if (userQuerySnapshot.empty) {
+            console.error(`User with email ${email} not found.`);
+            return { success: false, message: "User not found in database." };
+        }
+
+        // Get the user document reference
+        const userDoc = userQuerySnapshot.docs[0]; 
+        const userRef = userDoc.ref;
+
+        // Get current balance and update it
+        const currentBalance = userDoc.data().balance || 0;
+        const newBalance = currentBalance + amount;
+
+        await userRef.update({ balance: newBalance });
+
+        console.log(`Balance has been successfully updated for user with email ${email}. New Balance: ${newBalance}`);
+        return { success: true };
+    } catch (error) {
+        console.error(`Error updating balance for user with email ${email}:`, error.message);
+        throw error;
+    }
+}
+
 router.use(bodyParser.json());
 
 const endpointSecret = 'whsec_ZzpwcZDTquTdVspM4lGfKSUrKMn0WbR5';
