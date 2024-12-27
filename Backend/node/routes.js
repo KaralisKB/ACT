@@ -773,7 +773,6 @@ async function sendEmailNotification(to, subject, text) {
 }
 
 async function sendNotification(userId, stockSymbol, currentPrice, targetPrice, condition) {
-    // Fetch user details
     const userDoc = await db.collection('users').doc(userId).get();
     if (!userDoc.exists) {
         console.error(`User with ID ${userId} not found.`);
@@ -781,14 +780,13 @@ async function sendNotification(userId, stockSymbol, currentPrice, targetPrice, 
     }
 
     const user = userDoc.data();
-    const email = user.email; // Ensure user document contains an `email` field
+    const email = user.email;
 
     if (!email) {
         console.error(`No email found for user with ID ${userId}.`);
         return;
     }
 
-    // Construct the email content
     const subject = `Price Alert for ${stockSymbol}`;
     const body = `Hello ${user.firstName || ''},\n\n` +
         `Your price alert for ${stockSymbol} has been triggered. The stock has ${
@@ -797,9 +795,16 @@ async function sendNotification(userId, stockSymbol, currentPrice, targetPrice, 
         `Current price: ${currentPrice}\n\n` +
         `Best regards,\nYour Stock Trading Team`;
 
-    // Send the email
+    console.log(`Sending email to ${email} for alert:`, {
+        stockSymbol,
+        currentPrice,
+        targetPrice,
+        condition,
+    });
+
     await sendEmailNotification(email, subject, body);
 }
+
 
 // Periodic Price Check (CRON or Background Process)
 cron.schedule('*/5 * * * *', async () => { // Run every 5 minutes
@@ -807,9 +812,11 @@ cron.schedule('*/5 * * * *', async () => { // Run every 5 minutes
 
     try {
         const usersSnapshot = await db.collection('users').get();
+        console.log(`Fetched ${usersSnapshot.size} users.`);
 
         for (const userDoc of usersSnapshot.docs) {
             const userId = userDoc.id;
+            console.log(`Processing alerts for user ${userId}`);
 
             const alertsSnapshot = await db.collection('users').doc(userId).collection('PriceAlerts').get();
             const alerts = alertsSnapshot.docs.map(doc => ({
@@ -817,26 +824,25 @@ cron.schedule('*/5 * * * *', async () => { // Run every 5 minutes
                 ...doc.data(),
             }));
 
+            console.log(`Found ${alerts.length} alerts for user ${userId}`);
+
             for (const alert of alerts) {
                 const { stockSymbol, targetPrice, condition } = alert;
 
-                // Fetch the current stock price
                 const currentPrice = await fetchStockPrice(stockSymbol);
 
-                if (currentPrice === null) continue; // Skip if the price couldn't be fetched
+                if (currentPrice === null) continue;
 
                 const isTriggered =
                     (condition === 'above' && currentPrice > targetPrice) ||
                     (condition === 'below' && currentPrice < targetPrice);
 
                 if (isTriggered) {
-                    console.log(`Alert triggered for user ${userId}, stock ${stockSymbol}.`);
-
-                    // Notify the user (e.g., email, push notification)
+                    console.log(`Alert triggered for user ${userId}, stock ${stockSymbol}`);
                     await sendNotification(userId, stockSymbol, currentPrice, targetPrice, condition);
 
-                    // Optionally, delete the alert after triggering
                     await db.collection('users').doc(userId).collection('PriceAlerts').doc(alert.id).delete();
+                    console.log(`Deleted alert ${alert.id} for user ${userId}`);
                 }
             }
         }
@@ -844,5 +850,6 @@ cron.schedule('*/5 * * * *', async () => { // Run every 5 minutes
         console.error("Error running periodic price checks:", error);
     }
 });
+
 
 module.exports = router;
