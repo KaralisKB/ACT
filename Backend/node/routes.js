@@ -1,836 +1,292 @@
-const express = require('express');
-const admin = require('./firebase');
-const bodyParser = require('body-parser');
-const db = admin.firestore();
-const stripe = require('stripe')('sk_test_51QIBRoCd7KzAIIn8iJCQqCRhs6UgIe2A2pn00m2ATgYVN3gxqdHoUJ22Iq3gncDE7Ng6WpguWICaTzwT5JSohwbF00hEiKjG6f');
-const axios = require('axios');
-const nodemailer = require('nodemailer');
-const cron = require('node-cron');
+import React, { useEffect, useState } from "react";
+import {
+  Box,
+  Typography,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  TextField,
+  DialogActions,
+} from "@mui/material";
+import { DataGrid, GridToolbar } from "@mui/x-data-grid";
+import { tokens } from "../../theme";
+import { useTheme } from "@mui/material";
+import Header from "../../components/Headers";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
-const router = express.Router();
+const Watchlist = () => {
+  const storedData = JSON.parse(localStorage.getItem("user") || "{}");
+  const userId = storedData?.id;
+  const [rows, setRows] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [openAlertsDialog, setOpenAlertsDialog] = useState(false);
+  const [alerts, setAlerts] = useState([]);
+  const [ticker, setTicker] = useState("");
+  const [currentPrice, setCurrentPrice] = useState("");
+  const [alertPrice, setAlertPrice] = useState("");
+  const theme = useTheme();
+  const colors = tokens(theme.palette.mode);
+  const history = useNavigate();
 
-router.use(express.json());
+  const handleDialogOpen = async (stockTicker) => {
+    try {
+      const stockUrl = `https://finnhub.io/api/v1/quote?symbol=${stockTicker}&token=ce80b8aad3i4pjr4v2ggce80b8aad3i4pjr4v2h0`;
+      const response = await axios.get(stockUrl);
+      setTicker(stockTicker);
+      setCurrentPrice(response.data.c || "N/A");
+      setOpenDialog(true);
+    } catch (error) {
+      console.error("Error fetching stock price:", error.response?.data || error.message);
+    }
+  };
 
-// Firestore refs
-const portfolioColletion = db.collection('portfolio');
+  const handleDialogClose = () => {
+    setOpenDialog(false);
+    setTicker("");
+    setCurrentPrice("");
+    setAlertPrice("");
+  };
 
-router.post("/auth/register", async (req, res) => {
-    const { uid, email, firstName, lastName, role } = req.body;
-
-    // Validate incoming request
-    if (!uid || !email || !firstName || !lastName) {
-        console.error("Missing required fields:", { uid, email, firstName, lastName, role });
-        return res.status(400).send({ error: "Missing required fields." });
+  const handlePriceAlertSubmit = async () => {
+    if (!ticker || !alertPrice) {
+      alert("Please fill out all required fields.");
+      return;
     }
 
     try {
-        
-        console.log("Registering user with details:", { uid, email, firstName, lastName, role });
-
-        // Check if the user already exists in Firestore
-        const userDoc = await db.collection("users").doc(uid).get();
-        if (userDoc.exists) {
-            console.error("User with this UID already exists in Firestore:", uid);
-            return res.status(400).send({ error: "User already exists in Firestore." });
-        }
-
-        // Add user details to Firestore
-        await db.collection("users").doc(uid).set({
-            email,
-            firstName,
-            lastName,
-            role: role || "admin", // Default role if not provided
-            balance: 0,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        console.log("User successfully registered in Firestore:", uid);
-        res.status(201).send({ message: "User registered successfully." });
-    } catch (error) {
-        // Log the error for debugging
-        console.error("Error saving user to Firestore:", error);
-
-        // Differentiate Firestore errors
-        if (error.code === "permission-denied") {
-            return res.status(403).send({ error: "Insufficient permissions to save user in Firestore." });
-        }
-    }
-});
-
-//Login
-
-router.post('/auth/login', async (req, res) => {
-    const { idToken } = req.body;
-
-    if (!idToken) {
-        return res.status(400).send({ error: "Missing idToken in request." });
-    }
-
-    try {
-        // Verify the ID token using Firebase Admin SDK
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        const { uid, email } = decodedToken;
-
-        // Fetch user data from Firestore
-        const userDoc = await db.collection('users').doc(uid).get();
-        if (!userDoc.exists) {
-            return res.status(404).send({ error: "User not found in Firestore." });
-        }
-
-        const userData = userDoc.data();
-
-        res.status(200).send({
-            message: "Login successful",
-            user: {
-                id: uid,
-                email: userData.email,
-                firstName: userData.firstName,
-                lastName: userData.lastName,
-                role: userData.role,
-            },
-        });
-    } catch (error) {
-        console.error("Error verifying token:", error);
-        res.status(401).send({ error: "Unauthorized" });
-    }
-});
-
-// Add Balance to user
-router.post('/balance/add', async (req, res) => {
-    const { clientID, moneyAmount } = req.body;
-
-    try {
-        const userRecord = await db.collection('users').doc(uid).get();
-
-        if(!userRecord.exists) {
-            return res.status(404).send({message: "User not found in database."})
-        }
-
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-
-});
-
-
-async function updateClientBalance(userId, clientName, amount) {
-  try {
-      if (!userId || !clientName) {
-          console.error("User ID or Client Name is missing.");
-          return { success: false, message: "User ID and Client Name are required to update the client's balance." };
-      }
-
-      // Get the specific client's subcollection under the given user
-      const clientQuerySnapshot = await db
-          .collection('users')
-          .doc(userId) 
-          .collection('Clients')
-          .where('name', '==', clientName)
-          .get();
-
-      if (clientQuerySnapshot.empty) {
-          console.error(`Client with name "${clientName}" not found for user: ${userId}.`);
-          return { success: false, message: "Client not found in database." };
-      }
-
-      // Get the client document reference
-      const clientDoc = clientQuerySnapshot.docs[0];
-      const clientRef = clientDoc.ref;
-
-      // Get current balance and update it
-      const currentBalance = clientDoc.data().balance || 0;
-      const newBalance = currentBalance + amount;
-
-      await clientRef.update({ balance: newBalance });
-
-      console.log(`Balance updated successfully for client: ${clientName}. New Balance: ${newBalance}`);
-      return { success: true };
-  } catch (error) {
-      console.error(`Error updating balance for client: ${clientName}`, error.message);
-      throw error;
-  }
-}
-
-async function updateUserBalance(email, amount) {
-    try {
-        // Find the user by email
-        const userQuerySnapshot = await db.collection('users').where('email', '==', email).get();
-
-        if (userQuerySnapshot.empty) {
-            console.error(`User with email ${email} not found.`);
-            return { success: false, message: "User not found in database." };
-        }
-
-        // Get the user document reference
-        const userDoc = userQuerySnapshot.docs[0]; 
-        const userRef = userDoc.ref;
-
-        // Get current balance and update it
-        const currentBalance = userDoc.data().balance || 0;
-        const newBalance = currentBalance + amount;
-
-        await userRef.update({ balance: newBalance });
-
-        console.log(`Balance has been successfully updated for user with email ${email}. New Balance: ${newBalance}`);
-        return { success: true };
-    } catch (error) {
-        console.error(`Error updating balance for user with email ${email}:`, error.message);
-        throw error;
-    }
-}
-
-router.use(bodyParser.json());
-
-const endpointSecret = 'whsec_ZzpwcZDTquTdVspM4lGfKSUrKMn0WbR5';
-
-router.post('/webhook', express.json({ type: 'application/json' }), async (req, res) => {
-    const event = req.body;
-
-    try {
-        if (event.type !== 'checkout.session.completed') {
-            console.log(`Unhandled event type: ${event.type}`);
-            return res.status(400).end();
-        }
-
-        const session = event.data.object;
-
-        // Check if the "Client Name" custom field is present
-        let clientName = null;
-        if (session.custom_fields && Array.isArray(session.custom_fields)) {
-            const clientField = session.custom_fields.find(field => field.label?.custom === 'Client Name');
-            clientName = clientField?.text?.value;
-        }
-
-        if (clientName) {
-            // If "Client Name" custom field is present, execute the logic for Web payment link
-            console.log(`Detected Web payment link. Processing for client: ${clientName}`);
-            
-            const customerEmail = session.customer_details.email;
-            const amountPaid = session.amount_total / 100; 
-
-            console.log(`Payment completed: ${amountPaid} from ${customerEmail} for client ${clientName}`);
-
-            // Step 1: Find the user by email
-            const userQuerySnapshot = await db.collection('users').where('email', '==', customerEmail).get();
-
-            if (userQuerySnapshot.empty) {
-                console.error(`User with email ${customerEmail} not found.`);
-                return res.status(404).json({ error: 'User not found in database.' });
-            }
-
-            // Step 2: Get the user's client list
-            const userDoc = userQuerySnapshot.docs[0];
-            const userId = userDoc.id;
-            const clientsRef = db.collection('users').doc(userId).collection('Clients');
-            const clientsSnapshot = await clientsRef.get();
-
-            if (clientsSnapshot.empty) {
-                console.error(`No clients found for user with email ${customerEmail}.`);
-                return res.status(404).json({ error: 'No clients found for user.' });
-            }
-
-            // Step 3: Find the matching client
-            let matchedClient = null;
-            clientsSnapshot.forEach((doc) => {
-                const client = doc.data();
-                if (client.name.toLowerCase() === clientName.toLowerCase()) {
-                    matchedClient = { id: doc.id, ...client };
-                }
-            });
-
-            if (!matchedClient) {
-                console.error(`Client with name ${clientName} not found for user ${customerEmail}.`);
-                return res.status(404).json({ error: `Client ${clientName} not found for user.` });
-            }
-
-            // Step 4: Update the client's balance
-            const clientRef = clientsRef.doc(matchedClient.id);
-            const currentBalance = matchedClient.balance || 0;
-            const newBalance = currentBalance + amountPaid;
-
-            await clientRef.update({ balance: newBalance });
-
-            console.log(`Balance updated successfully for client ${clientName}. New Balance: ${newBalance}`);
-            return res.status(200).json({ message: 'Balance updated successfully.' });
-
-        } else {
-            // If "Client Name" custom field is not present, execute the logic for Android payment link
-            console.log(`Detected Android payment link. Processing as a general user payment.`);
-
-            const customerEmail = session.customer_details.email;
-            const amountPaid = session.amount_total / 100;
-
-            console.log(`Payment completed: ${amountPaid} from ${customerEmail}`);
-
-            try {
-                // Call the `updateUserBalance` function to update the balance
-                const result = await updateUserBalance(customerEmail, amountPaid);
-
-                if (result.success) {
-                    console.log(`Balance updated successfully for user with email ${customerEmail}`);
-                } else {
-                    console.error(result.message);
-                }
-            } catch (error) {
-                console.error(`Failed to update balance for user with email ${customerEmail}:`, error.message);
-            }
-
-            return res.status(200).json({ message: 'User balance updated successfully.' });
-        }
-    } catch (error) {
-        console.error('Error processing webhook:', error.message);
-        return res.status(500).json({ error: 'Webhook processing failed.' });
-    }
-});
-
-
-
-router.post('/watchlist/add', async (req, res) => {
-  const { userId, clientId, stockTicker } = req.body;
-
-  if (!userId || !clientId || !stockTicker) {
-      return res.status(400).send({ error: "Missing required fields." });
-  }
-
-  try {
-      // Reference the specific client document
-      const clientRef = db.collection('users').doc(userId).collection('Clients').doc(clientId);
-
-      // Check if the client exists
-      const clientDoc = await clientRef.get();
-      if (!clientDoc.exists) {
-          return res.status(404).send({ error: "Client not found." });
-      }
-
-      // Add the stock to the watchlist subcollection
-      const watchlistRef = clientRef.collection('watchlist');
-      await watchlistRef.doc(stockTicker).set({ ticker: stockTicker });
-
-      res.status(201).send({ message: "Stock added to client's watchlist." });
-  } catch (error) {
-      console.error("Error adding stock to watchlist:", error);
-      res.status(500).send({ error: "Failed to add stock to watchlist." });
-  }
-});
-
-router.get('/watchlist/:userId/:clientId', async (req, res) => {
-  const { userId, clientId } = req.params;
-
-  if (!userId || !clientId) {
-      return res.status(400).send({ error: "User ID and Client ID are required." });
-  }
-
-  try {
-      // Reference the watchlist subcollection under the specific client
-      const clientWatchlistRef = db
-          .collection('users')
-          .doc(userId)
-          .collection('Clients')
-          .doc(clientId)
-          .collection('watchlist');
-
-      const snapshot = await clientWatchlistRef.get();
-
-      // Extract the data from the watchlist
-      const watchlist = snapshot.docs.map((doc) => doc.data());
-      
-      res.status(200).send(watchlist);
-  } catch (error) {
-      console.error("Error fetching client's watchlist:", error);
-      res.status(500).send({ error: "Failed to fetch client's watchlist." });
-  }
-});
-
-router.delete('/watchlist/remove', async (req, res) => {
-  const { userId, clientId, stockTicker } = req.body;
-
-  // Validate required fields
-  if (!userId || !clientId || !stockTicker) {
-      return res.status(400).send({ error: "Missing required fields: userId, clientId, or stockTicker." });
-  }
-
-  try {
-      // Reference to the client's watchlist subcollection
-      const clientWatchlistRef = db
-          .collection('users')
-          .doc(userId)
-          .collection('Clients')
-          .doc(clientId)
-          .collection('watchlist');
-
-      // Delete the specific stock
-      await clientWatchlistRef.doc(stockTicker).delete();
-
-      res.status(200).send({ message: "Stock removed from client's watchlist." });
-  } catch (error) {
-      console.error("Error removing stock from client's watchlist:", error);
-      res.status(500).send({ error: "Failed to remove stock from client's watchlist." });
-  }
-});
-
-router.get('/client/balance/:userId/:clientId', async (req, res) => {
-    const { userId, clientId } = req.params;
-
-    if (!userId || !clientId) {
-        return res.status(400).json({ error: "User ID and Client ID are required." });
-    }
-
-    try {
-        // Fetch client document from Firestore
-        const clientDoc = await db
-            .collection('users')
-            .doc(userId)
-            .collection('Clients')
-            .doc(clientId)
-            .get();
-
-        if (!clientDoc.exists) {
-            return res.status(404).json({ error: "Client not found." });
-        }
-
-        const clientData = clientDoc.data();
-        const clientBalance = clientData.balance || 0; // Default to 0 if balance is not defined
-
-        res.status(200).json({ balance: clientBalance });
-    } catch (error) {
-        console.error("Error fetching client balance:", error);
-        res.status(500).json({ error: "Failed to fetch client balance." });
-    }
-});
-
-router.post("/buy", async (req, res) => {
-  const { userId, clientId, symbol, name, quantity, price, totalCost } = req.body;
-
-  // Check if required fields are provided
-  if (!userId || !clientId || !symbol || !quantity || !price || !totalCost) {
-      return res.status(400).json({ error: "Missing required fields in payload." });
-  }
-
-  const db = admin.firestore();
-
-  try {
-      // Get the client document from Firestore
-      const clientRef = db.collection("users").doc(userId).collection("Clients").doc(clientId);
-      const clientSnapshot = await clientRef.get();
-
-      if (!clientSnapshot.exists) {
-          return res.status(404).json({ error: "Client not found." });
-      }
-
-      const clientData = clientSnapshot.data();
-
-      // Check if the client has enough balance
-      if (clientData.balance < totalCost) {
-          return res.status(400).json({ error: "Insufficient balance." });
-      }
-
-      // Deduct the total cost from the client's balance
-      const newBalance = clientData.balance - totalCost;
-      await clientRef.update({ balance: newBalance });
-
-      // Add the transaction to the client's "Transactions" subcollection
-      const transactionData = {
-          symbol,
-          name,
-          quantity,
-          price,
-          totalCost,
-          type: "BUY",
-          date: admin.firestore.FieldValue.serverTimestamp(),
-      };
-
-      await clientRef.collection("Transactions").add(transactionData);
-
-      // Add the stock to the client's "Portfolio" subcollection
-      const portfolioRef = clientRef.collection("Portfolio").doc(symbol);
-      const portfolioSnapshot = await portfolioRef.get();
-
-      if (portfolioSnapshot.exists) {
-          // If the stock already exists in the portfolio, update its quantity and average price
-          const existingData = portfolioSnapshot.data();
-          const newQuantity = existingData.quantity + quantity;
-
-          await portfolioRef.update({
-              quantity: newQuantity,
-              averagePrice: ((existingData.quantity * existingData.averagePrice) + (quantity * price)) / newQuantity,
-          });
-      } else {
-          // If the stock does not exist, add it as a new entry
-          const portfolioData = {
-              name,
-              symbol,
-              quantity,
-              averagePrice: price,
-          };
-
-          await portfolioRef.set(portfolioData);
-      }
-
-      res.status(200).json({
-          message: "Stock purchase successful.",
-          newBalance,
-          portfolio: {
-              symbol,
-              quantity,
-              averagePrice: price,
-          },
-      });
-  } catch (error) {
-      console.error("Error processing buy transaction:", error);
-      res.status(500).json({ error: "Failed to process the buy transaction." });
-  }
-});
-
-  // Sell Stock Endpoint
-  router.post('/sell', async (req, res) => {
-    const { userId, clientId, symbol, name, quantity, price, totalEarnings } = req.body;
-
-    if (!userId || !clientId || !symbol || !quantity || !price || !totalEarnings) {
-        return res.status(400).json({ error: 'Missing required fields.' });
-    }
-
-    try {
-        // Reference to the client's portfolio
-        const clientPortfolioRef = db
-            .collection('users')
-            .doc(userId)
-            .collection('Clients')
-            .doc(clientId)
-            .collection('Portfolio')
-            .doc(symbol);
-
-        // Fetch the stock from the client's portfolio
-        const stockDoc = await clientPortfolioRef.get();
-        if (!stockDoc.exists) {
-            return res.status(404).json({ error: 'Stock not found in Portfolio.' });
-        }
-
-        const currentStock = stockDoc.data();
-
-        // Validate if the client has enough stock to sell
-        if (currentStock.quantity < quantity) {
-            return res.status(400).json({ error: 'Insufficient quantity to sell.' });
-        }
-
-        // Add a sell transaction to the client's Transactions subcollection
-        const clientTransactionsRef = db
-            .collection('users')
-            .doc(userId)
-            .collection('Clients')
-            .doc(clientId)
-            .collection('Transactions');
-
-        await clientTransactionsRef.add({
-            type: 'SELL',
-            symbol,
-            name,
-            quantity,
-            price,
-            totalEarnings,
-            date: admin.firestore.Timestamp.now(),
-        });
-
-        // Update the client's portfolio
-        if (currentStock.quantity === quantity) {
-            // Remove the stock entirely if fully sold
-            await clientPortfolioRef.delete();
-        } else {
-            // Update the stock quantity and total cost
-            await clientPortfolioRef.update({
-                quantity: admin.firestore.FieldValue.increment(-quantity),
-                totalCost: admin.firestore.FieldValue.increment(-totalEarnings),
-            });
-        }
-
-        // Update the client's balance
-        const clientRef = db.collection('users').doc(userId).collection('Clients').doc(clientId);
-        const clientDoc = await clientRef.get();
-
-        if (!clientDoc.exists) {
-            return res.status(404).json({ error: 'Client not found.' });
-        }
-
-        const clientData = clientDoc.data();
-        const updatedBalance = (clientData.balance || 0) + totalEarnings;
-
-        await clientRef.update({
-            balance: updatedBalance,
-        });
-
-        return res.json({ message: 'Stock sold successfully.', newBalance: updatedBalance });
-    } catch (error) {
-        console.error("Error processing sell transaction:", error);
-        return res.status(500).json({ error: 'Internal Server Error' });
-    }
-});
-
-  
-
-router.get('/portfolio/:userId/:clientId', async (req, res) => {
-  const { userId, clientId } = req.params;
-
-  try {
-      const db = admin.firestore();
-
-      // Reference to the client's portfolio subcollection
-      const portfolioRef = db
-          .collection('users')
-          .doc(userId)
-          .collection('Clients')
-          .doc(clientId)
-          .collection('Portfolio');
-
-      // Fetch the portfolio data
-      const portfolioSnapshot = await portfolioRef.get();
-
-      if (portfolioSnapshot.empty) {
-          return res.status(404).json({
-              message: 'No portfolio found for this client.',
-              portfolio: [],
-          });
-      }
-
-      // Map through portfolio documents and extract data
-      const portfolio = portfolioSnapshot.docs.map((doc) => {
-          const stock = doc.data();
-
-          return {
-              id: doc.id, 
-              name: stock.name || 'Unknown', 
-              symbol: stock.symbol || 'N/A', 
-              quantity: stock.quantity || 0,
-              price: stock.averagePrice || 0, 
-          };
+      await axios.post("https://act-production-5e24.up.railway.app/api/alerts/add", {
+        userId,
+        stockSymbol: ticker,
+        targetPrice: parseFloat(alertPrice),
+        condition: parseFloat(alertPrice) > parseFloat(currentPrice) ? "above" : "below",
       });
 
-      // Return portfolio data
-      res.status(200).json({ portfolio });
-  } catch (error) {
-      console.error('Error fetching portfolio:', error.message);
-      res.status(500).json({ error: 'Internal server error.' });
-  }
-});
-
-  router.get('/clients/:userId', async (req, res) => {
-    const { userId } = req.params;
-    try {
-      const clientsSnapshot = await db.collection('users').doc(userId).collection('Clients').get();
-      const clients = clientsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      res.status(200).json({ clients });
+      alert("Price alert added successfully.");
+      handleDialogClose();
     } catch (error) {
-      console.error('Error fetching clients:', error.message);
-      res.status(500).json({ error: 'Failed to fetch clients.' });
+      console.error("Error adding price alert:", error.response?.data || error.message);
     }
-  });
+  };
 
-  router.post('/clients/add/:userId', async (req, res) => {
-    const { userId } = req.params; // Extract userId from the URL path
-    const { clientName } = req.body; // Extract clientName from the request body
-  
-    if (!userId || !clientName) {
-      return res.status(400).json({ error: 'Missing userId or clientName.' });
-    }
-  
+  const fetchWatchlist = async () => {
     try {
-      const clientRef = db.collection('users').doc(userId).collection('Clients').doc();
-      const newClient = { name: clientName, balance: 1.99 /*signup bonus */};
-  
-      await clientRef.set(newClient);
-  
-      res.status(201).json({
-        message: 'Client added successfully.',
-        newClient: { id: clientRef.id, ...newClient },
-      });
+      const response = await axios.get(
+        `https://act-production-5e24.up.railway.app/api/watchlist/${userId}`
+      );
+      setRows(response.data);
     } catch (error) {
-      console.error('Error adding client:', error.message);
-      res.status(500).json({ error: 'Failed to add client.' });
+      console.error("Error fetching watchlist:", error.response?.data || error.message);
+    } finally {
+      setIsLoading(false);
     }
-  });
+  };
 
-
-  router.post('/alerts/add', async (req, res) => {
-    const { userId, stockSymbol, targetPrice, condition } = req.body;
-
-    if (!userId || !stockSymbol || !targetPrice || !condition) {
-        return res.status(400).json({ error: "Missing required fields: userId, stockSymbol, targetPrice, condition." });
-    }
-
+  const fetchPriceAlerts = async () => {
     try {
-        const alertsRef = db.collection('users').doc(userId).collection('PriceAlerts');
-
-        const alert = {
-            stockSymbol,
-            targetPrice,
-            condition, // "above" or "below"
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        };
-
-        const alertDoc = await alertsRef.add(alert);
-
-        res.status(201).json({
-            message: "Price alert added successfully.",
-            alertId: alertDoc.id,
-        });
+      const response = await axios.get(
+        `https://act-production-5e24.up.railway.app/api/alerts/${userId}`
+      );
+      setAlerts(response.data);
+      setOpenAlertsDialog(true);
     } catch (error) {
-        console.error("Error adding price alert:", error);
-        res.status(500).json({ error: "Failed to add price alert." });
+      console.error("Error fetching price alerts:", error.response?.data || error.message);
     }
-});
+  };
 
-// Fetch all price alerts for a user
-router.get('/alerts/:userId', async (req, res) => {
-    const { userId } = req.params;
-
-    if (!userId) {
-        return res.status(400).json({ error: "Missing required field: userId." });
-    }
-
+  const deletePriceAlert = async (alertId) => {
     try {
-        const alertsRef = db.collection('users').doc(userId).collection('PriceAlerts');
-        const snapshot = await alertsRef.get();
-
-        const alerts = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-        }));
-
-        res.status(200).json({ alerts });
+      await axios.delete(
+        `https://act-production-5e24.up.railway.app/api/alerts/remove`,
+        { data: { userId, alertId } }
+      );
+      setAlerts((prevAlerts) => prevAlerts.filter((alert) => alert.id !== alertId));
     } catch (error) {
-        console.error("Error fetching price alerts:", error);
-        res.status(500).json({ error: "Failed to fetch price alerts." });
+      console.error("Error deleting price alert:", error.response?.data || error.message);
     }
-});
+  };
 
-// Delete a price alert
-router.delete('/alerts/remove', async (req, res) => {
-    const { userId, alertId } = req.body;
+  const handleAlertsDialogClose = () => {
+    setOpenAlertsDialog(false);
+    setAlerts([]);
+  };
 
-    if (!userId || !alertId) {
-        return res.status(400).json({ error: "Missing required fields: userId, alertId." });
-    }
+  useEffect(() => {
+    fetchWatchlist();
+  }, []);
 
-    try {
-        const alertRef = db.collection('users').doc(userId).collection('PriceAlerts').doc(alertId);
-        await alertRef.delete();
-
-        res.status(200).json({ message: "Price alert deleted successfully." });
-    } catch (error) {
-        console.error("Error deleting price alert:", error);
-        res.status(500).json({ error: "Failed to delete price alert." });
-    }
-});
-
-const transporter = nodemailer.createTransport({
-    service: 'Gmail', // Replace with your email service
-    auth: {
-        user: 'acthelpcentre@gmail.com', // Replace with your email
-        pass: 'VOLAKBIA2024', // Replace with your email password or app-specific password
+  const columns = [
+    { field: "name", headerName: "Company Name", flex: 1 },
+    { field: "symbol", headerName: "Symbol", flex: 0.5 },
+    { field: "today", headerName: "Current Price", flex: 0.5, type: "number" },
+    { field: "Percent", headerName: "Percent Change", flex: 0.5, type: "number" },
+    { field: "open", headerName: "Open", flex: 0.3, type: "number" },
+    { field: "high", headerName: "High", flex: 0.3, type: "number" },
+    { field: "low", headerName: "Low", flex: 0.3, type: "number" },
+    { field: "close", headerName: "Close", flex: 0.3, type: "number" },
+    {
+      field: "Add Alert",
+      headerName: "Price Alert",
+      sortable: false,
+      renderCell: (params) => (
+        <Button
+          onClick={() => handleDialogOpen(params.row.symbol)}
+          variant="contained"
+          color="info"
+        >
+          Add Alert
+        </Button>
+      ),
     },
-});
+    {
+      field: "Buy",
+      headerName: "Buy",
+      sortable: false,
+      renderCell: (params) => (
+        <Button
+          onClick={() => history("/buyStock", { state: params.row })}
+          variant="contained"
+          color="success"
+        >
+          Buy
+        </Button>
+      ),
+    },
+    {
+      field: "Sell",
+      headerName: "Sell",
+      sortable: false,
+      renderCell: (params) => (
+        <Button
+          onClick={() => history("/sellStock", { state: params.row })}
+          variant="outlined"
+          color="error"
+        >
+          Sell
+        </Button>
+      ),
+    },
+    {
+      field: "Delete",
+      headerName: "Delete",
+      sortable: false,
+      renderCell: (params) => (
+        <DeleteIcon
+          onClick={() => deleteWatchlistItem(params.row.symbol)}
+          style={{ cursor: "pointer", color: "red" }}
+        />
+      ),
+    },
+    {
+      field: "Details",
+      headerName: "Details",
+      sortable: false,
+      renderCell: (params) => (
+        <AddCircleOutlineIcon
+          onClick={() => history("/details", { state: params.row })}
+          style={{ cursor: "pointer" }}
+        />
+      ),
+    },
+  ];
 
-async function fetchStockPrice(stockSymbol) {
-    const apiUrl = `https://finnhub.io/api/v1/quote?symbol=${stockSymbol}&token=ce80b8aad3i4pjr4v2ggce80b8aad3i4pjr4v2h0`;
+  return (
+    <Box m="20px">
+      <Header title="Watchlist" subtitle="Your Watchlisted Stocks" />
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={fetchPriceAlerts}
+        style={{ marginBottom: "20px" }}
+      >
+        View Price Alerts
+      </Button>
+      <Box
+        m="40px 0 0 0"
+        height="75vh"
+        sx={{
+          "& .MuiDataGrid-root": { border: "none" },
+          "& .MuiDataGrid-cell": { borderBottom: "none" },
+          "& .MuiDataGrid-columnHeaders": { backgroundColor: colors.blueAccent[700], borderBottom: "none" },
+          "& .MuiDataGrid-virtualScroller": { backgroundColor: colors.primary[400] },
+          "& .MuiDataGrid-footerContainer": { borderTop: "none", backgroundColor: colors.blueAccent[700] },
+        }}
+      >
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          components={{ Toolbar: GridToolbar }}
+          loading={isLoading}
+        />
+      </Box>
 
-    try {
-        const response = await axios.get(apiUrl);
+      {/* Dialog for Adding Price Alert */}
+      <Dialog open={openDialog} onClose={handleDialogClose}>
+        <DialogTitle>Add Price Alert</DialogTitle>
+        <DialogContent>
+          <TextField
+            margin="dense"
+            label="Stock Ticker"
+            type="text"
+            fullWidth
+            value={ticker}
+            disabled
+          />
+          <TextField
+            margin="dense"
+            label="Current Price"
+            type="number"
+            fullWidth
+            value={currentPrice}
+            disabled
+          />
+          <TextField
+            margin="dense"
+            label="Alert Price"
+            type="number"
+            fullWidth
+            value={alertPrice}
+            onChange={(e) => setAlertPrice(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose} color="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handlePriceAlertSubmit} color="primary">
+            Submit
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-        if (response.status === 200 && response.data) {
-            return response.data.c; // Return the current price ("c" field in the API response)
-        } else {
-            console.error(`Failed to fetch stock price for ${stockSymbol}. Response:`, response);
-            return null;
-        }
-    } catch (error) {
-        console.error(`Error fetching stock price for ${stockSymbol}:`, error);
-        return null;
-    }
-}
+      {/* Dialog for Viewing Price Alerts */}
+      <Dialog open={openAlertsDialog} onClose={handleAlertsDialogClose}>
+        <DialogTitle>Your Price Alerts</DialogTitle>
+        <DialogContent>
+          {alerts.map((alert) => (
+            <Box key={alert.id} display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+              <Typography>
+                {alert.stockSymbol} - {alert.condition} {alert.targetPrice}
+              </Typography>
+              <DeleteIcon
+                onClick={() => deletePriceAlert(alert.id)}
+                style={{ cursor: "pointer", color: "red" }}
+              />
+            </Box>
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleAlertsDialogClose} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};
 
-async function sendEmailNotification(to, subject, text) {
-    try {
-        await transporter.sendMail({
-            from: 'acthelpcentre@gmail.com', // Sender address
-            to, // Recipient address
-            subject, // Email subject
-            text, // Email body
-        });
-        console.log(`Email sent to ${to}`);
-    } catch (error) {
-        console.error(`Failed to send email to ${to}:`, error.message);
-    }
-}
-
-async function sendNotification(userId, stockSymbol, currentPrice, targetPrice, condition) {
-    // Fetch user details
-    const userDoc = await db.collection('users').doc(userId).get();
-    if (!userDoc.exists) {
-        console.error(`User with ID ${userId} not found.`);
-        return;
-    }
-
-    const user = userDoc.data();
-    const email = user.email; // Ensure user document contains an `email` field
-
-    if (!email) {
-        console.error(`No email found for user with ID ${userId}.`);
-        return;
-    }
-
-    // Construct the email content
-    const subject = `Price Alert for ${stockSymbol}`;
-    const body = `Hello ${user.firstName || ''},\n\n` +
-        `Your price alert for ${stockSymbol} has been triggered. The stock has ${
-            condition === 'above' ? 'exceeded' : 'dropped below'
-        } your target price of ${targetPrice}.\n\n` +
-        `Current price: ${currentPrice}\n\n` +
-        `Best regards,\nYour Stock Trading Team`;
-
-    // Send the email
-    await sendEmailNotification(email, subject, body);
-}
-
-// Periodic Price Check (CRON or Background Process)
-cron.schedule('*/5 * * * *', async () => { // Run every 5 minutes
-    console.log("Running periodic price alert checks...");
-
-    try {
-        const usersSnapshot = await db.collection('users').get();
-
-        for (const userDoc of usersSnapshot.docs) {
-            const userId = userDoc.id;
-
-            const alertsSnapshot = await db.collection('users').doc(userId).collection('PriceAlerts').get();
-            const alerts = alertsSnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-            }));
-
-            for (const alert of alerts) {
-                const { stockSymbol, targetPrice, condition } = alert;
-
-                // Fetch the current stock price
-                const currentPrice = await fetchStockPrice(stockSymbol);
-
-                if (currentPrice === null) continue; // Skip if the price couldn't be fetched
-
-                const isTriggered =
-                    (condition === 'above' && currentPrice > targetPrice) ||
-                    (condition === 'below' && currentPrice < targetPrice);
-
-                if (isTriggered) {
-                    console.log(`Alert triggered for user ${userId}, stock ${stockSymbol}.`);
-
-                    // Notify the user (e.g., email, push notification)
-                    await sendNotification(userId, stockSymbol, currentPrice, targetPrice, condition);
-
-                    // Optionally, delete the alert after triggering
-                    await db.collection('users').doc(userId).collection('PriceAlerts').doc(alert.id).delete();
-                }
-            }
-        }
-    } catch (error) {
-        console.error("Error running periodic price checks:", error);
-    }
-});
-
-module.exports = router;
+export default Watchlist;
