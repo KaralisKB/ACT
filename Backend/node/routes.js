@@ -736,7 +736,7 @@ const transporter = nodemailer.createTransport({
     service: 'Gmail', // Replace with your email service
     auth: {
         user: 'acthelpcentre@gmail.com', // Replace with your email
-        pass: 'VOLAKBIA2024', // Replace with your email password or app-specific password
+        pass: 'jkpvzvepnewhtrmw', // Replace with your email password or app-specific password
     },
 });
 
