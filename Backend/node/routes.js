@@ -686,20 +686,28 @@ router.get('/alerts/:userId', async (req, res) => {
     }
 
     try {
+        console.log(`Fetching alerts for userId: ${userId}`);
         const alertsRef = db.collection('users').doc(userId).collection('PriceAlerts');
         const snapshot = await alertsRef.get();
+
+        if (snapshot.empty) {
+            console.log(`No documents found in PriceAlerts for userId: ${userId}`);
+            return res.status(200).json({ alerts: [] });
+        }
 
         const alerts = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
         }));
 
+        console.log(`Fetched alerts: ${JSON.stringify(alerts)}`);
         res.status(200).json({ alerts });
     } catch (error) {
         console.error("Error fetching price alerts:", error);
         res.status(500).json({ error: "Failed to fetch price alerts." });
     }
 });
+
 
 // Delete a price alert
 router.delete('/alerts/remove', async (req, res) => {
