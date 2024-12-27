@@ -656,7 +656,7 @@ router.get('/portfolio/:userId/:clientId', async (req, res) => {
     }
 
     try {
-        const alertsRef = db.collection('users').doc(userId).collection('price_alerts');
+        const alertsRef = db.collection('users').doc(userId).collection('PriceAlerts');
 
         const alert = {
             stockSymbol,
