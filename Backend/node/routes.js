@@ -747,7 +747,9 @@ async function fetchStockPrice(stockSymbol) {
         const response = await axios.get(apiUrl);
 
         if (response.status === 200 && response.data) {
-            return response.data.c; // Return the current price ("c" field in the API response)
+            const currentPrice = response.data.c; // Current price
+            console.log(`Fetched price for ${stockSymbol}: ${currentPrice}`);
+            return currentPrice;
         } else {
             console.error(`Failed to fetch stock price for ${stockSymbol}. Response:`, response);
             return null;
@@ -757,6 +759,7 @@ async function fetchStockPrice(stockSymbol) {
         return null;
     }
 }
+
 
 async function sendEmailNotification(to, subject, text) {
     try {
@@ -795,15 +798,12 @@ async function sendNotification(userId, stockSymbol, currentPrice, targetPrice, 
         `Current price: ${currentPrice}\n\n` +
         `Best regards,\nYour Stock Trading Team`;
 
-    console.log(`Sending email to ${email} for alert:`, {
-        stockSymbol,
-        currentPrice,
-        targetPrice,
-        condition,
-    });
+    console.log(`Sending email to ${email} with subject "${subject}"`);
+    console.log(`Email body:\n${body}`);
 
     await sendEmailNotification(email, subject, body);
 }
+
 
 
 // Periodic Price Check (CRON or Background Process)
@@ -828,23 +828,39 @@ cron.schedule('*/5 * * * *', async () => { // Run every 5 minutes
 
             for (const alert of alerts) {
                 const { stockSymbol, targetPrice, condition } = alert;
-
+            
+                // Fetch the current stock price
                 const currentPrice = await fetchStockPrice(stockSymbol);
-
-                if (currentPrice === null) continue;
-
+            
+                if (currentPrice === null) {
+                    console.log(`Skipping alert for ${stockSymbol}. Current price could not be fetched.`);
+                    continue; // Skip if the price couldn't be fetched
+                }
+            
+                // Log all the key values before evaluating the condition
+                console.log(`Evaluating alert for stock ${stockSymbol}:`);
+                console.log(`- Current Price: ${currentPrice}`);
+                console.log(`- Target Price: ${targetPrice}`);
+                console.log(`- Condition: ${condition}`);
+            
                 const isTriggered =
                     (condition === 'above' && currentPrice > targetPrice) ||
                     (condition === 'below' && currentPrice < targetPrice);
-
+            
+                console.log(`Is Triggered: ${isTriggered}`);
+            
                 if (isTriggered) {
-                    console.log(`Alert triggered for user ${userId}, stock ${stockSymbol}`);
+                    console.log(`Alert triggered for user ${userId}, stock ${stockSymbol}.`);
+            
+                    // Notify the user (e.g., email, push notification)
                     await sendNotification(userId, stockSymbol, currentPrice, targetPrice, condition);
-
+            
+                    // Optionally, delete the alert after triggering
                     await db.collection('users').doc(userId).collection('PriceAlerts').doc(alert.id).delete();
                     console.log(`Deleted alert ${alert.id} for user ${userId}`);
                 }
             }
+            
         }
     } catch (error) {
         console.error("Error running periodic price checks:", error);
