@@ -687,8 +687,12 @@ router.get('/alerts/:userId', async (req, res) => {
 
     try {
         console.log(`Fetching alerts for userId: ${userId}`);
+        console.log(`Attempting to fetch PriceAlerts for userId: ${userId}`);
+        console.log(`Path to subcollection: users/${userId}/PriceAlerts`);
         const alertsRef = db.collection('users').doc(userId).collection('PriceAlerts');
         const snapshot = await alertsRef.get();
+        console.log(`Snapshot empty: ${snapshot.empty}`);
+
 
         if (snapshot.empty) {
             console.log(`No documents found in PriceAlerts for userId: ${userId}`);
