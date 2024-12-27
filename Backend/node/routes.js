@@ -2,7 +2,10 @@ const express = require('express');
 const admin = require('./firebase');
 const bodyParser = require('body-parser');
 const db = admin.firestore();
-const stripe = require('stripe')('sk_test_51QIBRoCd7KzAIIn8iJCQqCRhs6UgIe2A2pn00m2ATgYVN3gxqdHoUJ22Iq3gncDE7Ng6WpguWICaTzwT5JSohwbF00hEiKjG6f'); // Replace with your Stripe secret key
+const stripe = require('stripe')('sk_test_51QIBRoCd7KzAIIn8iJCQqCRhs6UgIe2A2pn00m2ATgYVN3gxqdHoUJ22Iq3gncDE7Ng6WpguWICaTzwT5JSohwbF00hEiKjG6f');
+const axios = require('axios');
+const nodemailer = require('nodemailer');
+const cron = require('node-cron');
 
 const router = express.Router();
 
@@ -21,7 +24,7 @@ router.post("/auth/register", async (req, res) => {
     }
 
     try {
-        // Log incoming request for debugging
+        
         console.log("Registering user with details:", { uid, email, firstName, lastName, role });
 
         // Check if the user already exists in Firestore
@@ -120,7 +123,7 @@ async function updateClientBalance(userId, clientName, amount) {
       // Get the specific client's subcollection under the given user
       const clientQuerySnapshot = await db
           .collection('users')
-          .doc(userId) // Use the provided userId instead of localStorage
+          .doc(userId) 
           .collection('Clients')
           .where('name', '==', clientName)
           .get();
@@ -203,7 +206,7 @@ router.post('/webhook', express.json({ type: 'application/json' }), async (req, 
             console.log(`Detected Web payment link. Processing for client: ${clientName}`);
             
             const customerEmail = session.customer_details.email;
-            const amountPaid = session.amount_total / 100; // Stripe sends amounts in cents
+            const amountPaid = session.amount_total / 100; 
 
             console.log(`Payment completed: ${amountPaid} from ${customerEmail} for client ${clientName}`);
 
@@ -255,7 +258,7 @@ router.post('/webhook', express.json({ type: 'application/json' }), async (req, 
             console.log(`Detected Android payment link. Processing as a general user payment.`);
 
             const customerEmail = session.customer_details.email;
-            const amountPaid = session.amount_total / 100; // Stripe sends amounts in cents
+            const amountPaid = session.amount_total / 100;
 
             console.log(`Payment completed: ${amountPaid} from ${customerEmail}`);
 
@@ -432,7 +435,7 @@ router.post("/buy", async (req, res) => {
           quantity,
           price,
           totalCost,
-          type: "BUY", // Specify the type of transaction
+          type: "BUY",
           date: admin.firestore.FieldValue.serverTimestamp(),
       };
 
@@ -463,7 +466,6 @@ router.post("/buy", async (req, res) => {
           await portfolioRef.set(portfolioData);
       }
 
-      // Respond with success
       res.status(200).json({
           message: "Stock purchase successful.",
           newBalance,
@@ -593,11 +595,11 @@ router.get('/portfolio/:userId/:clientId', async (req, res) => {
           const stock = doc.data();
 
           return {
-              id: doc.id, // Stock document ID
-              name: stock.name || 'Unknown', // Stock name
-              symbol: stock.symbol || 'N/A', // Stock symbol
-              quantity: stock.quantity || 0, // Number of shares
-              price: stock.averagePrice || 0, // Average purchase price
+              id: doc.id, 
+              name: stock.name || 'Unknown', 
+              symbol: stock.symbol || 'N/A', 
+              quantity: stock.quantity || 0,
+              price: stock.averagePrice || 0, 
           };
       });
 
@@ -644,5 +646,191 @@ router.get('/portfolio/:userId/:clientId', async (req, res) => {
       res.status(500).json({ error: 'Failed to add client.' });
     }
   });
+
+
+  router.post('/alerts/add', async (req, res) => {
+    const { userId, stockSymbol, targetPrice, condition } = req.body;
+
+    if (!userId || !stockSymbol || !targetPrice || !condition) {
+        return res.status(400).json({ error: "Missing required fields: userId, stockSymbol, targetPrice, condition." });
+    }
+
+    try {
+        const alertsRef = db.collection('users').doc(userId).collection('PriceAlerts');
+
+        const alert = {
+            stockSymbol,
+            targetPrice,
+            condition, // "above" or "below"
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+
+        const alertDoc = await alertsRef.add(alert);
+
+        res.status(201).json({
+            message: "Price alert added successfully.",
+            alertId: alertDoc.id,
+        });
+    } catch (error) {
+        console.error("Error adding price alert:", error);
+        res.status(500).json({ error: "Failed to add price alert." });
+    }
+});
+
+// Fetch all price alerts for a user
+router.get('/alerts/:userId', async (req, res) => {
+    const { userId } = req.params;
+
+    if (!userId) {
+        return res.status(400).json({ error: "Missing required field: userId." });
+    }
+
+    try {
+        const alertsRef = db.collection('users').doc(userId).collection('PriceAlerts');
+        const snapshot = await alertsRef.get();
+
+        const alerts = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+
+        res.status(200).json({ alerts });
+    } catch (error) {
+        console.error("Error fetching price alerts:", error);
+        res.status(500).json({ error: "Failed to fetch price alerts." });
+    }
+});
+
+// Delete a price alert
+router.delete('/alerts/remove', async (req, res) => {
+    const { userId, alertId } = req.body;
+
+    if (!userId || !alertId) {
+        return res.status(400).json({ error: "Missing required fields: userId, alertId." });
+    }
+
+    try {
+        const alertRef = db.collection('users').doc(userId).collection('PriceAlerts').doc(alertId);
+        await alertRef.delete();
+
+        res.status(200).json({ message: "Price alert deleted successfully." });
+    } catch (error) {
+        console.error("Error deleting price alert:", error);
+        res.status(500).json({ error: "Failed to delete price alert." });
+    }
+});
+
+const transporter = nodemailer.createTransport({
+    service: 'Gmail', // Replace with your email service
+    auth: {
+        user: 'acthelpcentre@gmail.com', // Replace with your email
+        pass: 'VOLAKBIA2024', // Replace with your email password or app-specific password
+    },
+});
+
+async function fetchStockPrice(stockSymbol) {
+    const apiUrl = `https://finnhub.io/api/v1/quote?symbol=${stockSymbol}&token=ce80b8aad3i4pjr4v2ggce80b8aad3i4pjr4v2h0`;
+
+    try {
+        const response = await axios.get(apiUrl);
+
+        if (response.status === 200 && response.data) {
+            return response.data.c; // Return the current price ("c" field in the API response)
+        } else {
+            console.error(`Failed to fetch stock price for ${stockSymbol}. Response:`, response);
+            return null;
+        }
+    } catch (error) {
+        console.error(`Error fetching stock price for ${stockSymbol}:`, error);
+        return null;
+    }
+}
+
+async function sendEmailNotification(to, subject, text) {
+    try {
+        await transporter.sendMail({
+            from: 'acthelpcentre@gmail.com', // Sender address
+            to, // Recipient address
+            subject, // Email subject
+            text, // Email body
+        });
+        console.log(`Email sent to ${to}`);
+    } catch (error) {
+        console.error(`Failed to send email to ${to}:`, error.message);
+    }
+}
+
+async function sendNotification(userId, stockSymbol, currentPrice, targetPrice, condition) {
+    // Fetch user details
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+        console.error(`User with ID ${userId} not found.`);
+        return;
+    }
+
+    const user = userDoc.data();
+    const email = user.email; // Ensure user document contains an `email` field
+
+    if (!email) {
+        console.error(`No email found for user with ID ${userId}.`);
+        return;
+    }
+
+    // Construct the email content
+    const subject = `Price Alert for ${stockSymbol}`;
+    const body = `Hello ${user.firstName || ''},\n\n` +
+        `Your price alert for ${stockSymbol} has been triggered. The stock has ${
+            condition === 'above' ? 'exceeded' : 'dropped below'
+        } your target price of ${targetPrice}.\n\n` +
+        `Current price: ${currentPrice}\n\n` +
+        `Best regards,\nYour Stock Trading Team`;
+
+    // Send the email
+    await sendEmailNotification(email, subject, body);
+}
+
+// Periodic Price Check (CRON or Background Process)
+cron.schedule('*/5 * * * *', async () => { // Run every 5 minutes
+    console.log("Running periodic price alert checks...");
+
+    try {
+        const usersSnapshot = await db.collection('users').get();
+
+        for (const userDoc of usersSnapshot.docs) {
+            const userId = userDoc.id;
+
+            const alertsSnapshot = await db.collection('users').doc(userId).collection('PriceAlerts').get();
+            const alerts = alertsSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+
+            for (const alert of alerts) {
+                const { stockSymbol, targetPrice, condition } = alert;
+
+                // Fetch the current stock price
+                const currentPrice = await fetchStockPrice(stockSymbol);
+
+                if (currentPrice === null) continue; // Skip if the price couldn't be fetched
+
+                const isTriggered =
+                    (condition === 'above' && currentPrice > targetPrice) ||
+                    (condition === 'below' && currentPrice < targetPrice);
+
+                if (isTriggered) {
+                    console.log(`Alert triggered for user ${userId}, stock ${stockSymbol}.`);
+
+                    // Notify the user (e.g., email, push notification)
+                    await sendNotification(userId, stockSymbol, currentPrice, targetPrice, condition);
+
+                    // Optionally, delete the alert after triggering
+                    await db.collection('users').doc(userId).collection('PriceAlerts').doc(alert.id).delete();
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Error running periodic price checks:", error);
+    }
+});
 
 module.exports = router;
