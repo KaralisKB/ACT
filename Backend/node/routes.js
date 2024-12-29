@@ -399,87 +399,99 @@ router.get('/client/balance/:userId/:clientId', async (req, res) => {
 });
 
 router.post("/buy", async (req, res) => {
-  const { userId, clientId, symbol, name, quantity, price, totalCost } = req.body;
+    const { userId, clientId, symbol, name, quantity, price, totalCost } = req.body;
 
-  // Check if required fields are provided
-  if (!userId || !clientId || !symbol || !quantity || !price || !totalCost) {
-      return res.status(400).json({ error: "Missing required fields in payload." });
-  }
+    // Check if required fields are provided
+    if (!userId || !clientId || !symbol || !quantity || !price || !totalCost) {
+        return res.status(400).json({ error: "Missing required fields in payload." });
+    }
 
-  const db = admin.firestore();
+    const db = admin.firestore();
 
-  try {
-      // Get the client document from Firestore
-      const clientRef = db.collection("users").doc(userId).collection("Clients").doc(clientId);
-      const clientSnapshot = await clientRef.get();
+    try {
+        // Get the client document from Firestore
+        const clientRef = db.collection("users").doc(userId).collection("Clients").doc(clientId);
+        const clientSnapshot = await clientRef.get();
 
-      if (!clientSnapshot.exists) {
-          return res.status(404).json({ error: "Client not found." });
-      }
+        if (!clientSnapshot.exists) {
+            return res.status(404).json({ error: "Client not found." });
+        }
 
-      const clientData = clientSnapshot.data();
+        const clientData = clientSnapshot.data();
 
-      // Check if the client has enough balance
-      if (clientData.balance < totalCost) {
-          return res.status(400).json({ error: "Insufficient balance." });
-      }
+        // Check if the client has enough balance
+        if (clientData.balance < totalCost) {
+            return res.status(400).json({ error: "Insufficient balance." });
+        }
 
-      // Deduct the total cost from the client's balance
-      const newBalance = clientData.balance - totalCost;
-      await clientRef.update({ balance: newBalance });
+        // Deduct the total cost from the client's balance
+        const newBalance = clientData.balance - totalCost;
+        await clientRef.update({ balance: newBalance });
 
-      // Add the transaction to the client's "Transactions" subcollection
-      const transactionData = {
-          symbol,
-          name,
-          quantity,
-          price,
-          totalCost,
-          type: "BUY",
-          date: admin.firestore.FieldValue.serverTimestamp(),
-      };
+        // Add the transaction to the client's "Transactions" subcollection
+        const transactionData = {
+            symbol,
+            name,
+            quantity,
+            price,
+            totalCost,
+            type: "BUY",
+            date: admin.firestore.FieldValue.serverTimestamp(),
+        };
 
-      await clientRef.collection("Transactions").add(transactionData);
+        await clientRef.collection("Transactions").add(transactionData);
 
-      // Add the stock to the client's "Portfolio" subcollection
-      const portfolioRef = clientRef.collection("Portfolio").doc(symbol);
-      const portfolioSnapshot = await portfolioRef.get();
+        // Add the transaction to the client's "Orders" subcollection for displaying in the Orders page
+        await clientRef.collection("Orders").add({
+            symbol,
+            name,
+            quantity,
+            price,
+            totalCost,
+            type: "BUY",
+            date: admin.firestore.FieldValue.serverTimestamp(),
+        });
 
-      if (portfolioSnapshot.exists) {
-          // If the stock already exists in the portfolio, update its quantity and average price
-          const existingData = portfolioSnapshot.data();
-          const newQuantity = existingData.quantity + quantity;
+        // Add the stock to the client's "Portfolio" subcollection
+        const portfolioRef = clientRef.collection("Portfolio").doc(symbol);
+        const portfolioSnapshot = await portfolioRef.get();
 
-          await portfolioRef.update({
-              quantity: newQuantity,
-              averagePrice: ((existingData.quantity * existingData.averagePrice) + (quantity * price)) / newQuantity,
-          });
-      } else {
-          // If the stock does not exist, add it as a new entry
-          const portfolioData = {
-              name,
-              symbol,
-              quantity,
-              averagePrice: price,
-          };
+        if (portfolioSnapshot.exists) {
+            // If the stock already exists in the portfolio, update its quantity and average price
+            const existingData = portfolioSnapshot.data();
+            const newQuantity = existingData.quantity + quantity;
 
-          await portfolioRef.set(portfolioData);
-      }
+            await portfolioRef.update({
+                quantity: newQuantity,
+                averagePrice: ((existingData.quantity * existingData.averagePrice) + (quantity * price)) / newQuantity,
+            });
+        } else {
+            // If the stock does not exist, add it as a new entry
+            const portfolioData = {
+                name,
+                symbol,
+                quantity,
+                averagePrice: price,
+            };
 
-      res.status(200).json({
-          message: "Stock purchase successful.",
-          newBalance,
-          portfolio: {
-              symbol,
-              quantity,
-              averagePrice: price,
-          },
-      });
-  } catch (error) {
-      console.error("Error processing buy transaction:", error);
-      res.status(500).json({ error: "Failed to process the buy transaction." });
-  }
+            await portfolioRef.set(portfolioData);
+        }
+
+        res.status(200).json({
+            message: "Stock purchase successful.",
+            newBalance,
+            portfolio: {
+                symbol,
+                quantity,
+                averagePrice: price,
+            },
+        });
+    } catch (error) {
+        console.error("Error processing buy transaction:", error);
+        res.status(500).json({ error: "Failed to process the buy transaction." });
+    }
 });
+
 
   // Sell Stock Endpoint
   router.post('/sell', async (req, res) => {
@@ -488,6 +500,8 @@ router.post("/buy", async (req, res) => {
     if (!userId || !clientId || !symbol || !quantity || !price || !totalEarnings) {
         return res.status(400).json({ error: 'Missing required fields.' });
     }
+
+    const db = admin.firestore();
 
     try {
         // Reference to the client's portfolio
@@ -520,7 +534,7 @@ router.post("/buy", async (req, res) => {
             .doc(clientId)
             .collection('Transactions');
 
-        await clientTransactionsRef.add({
+        const transactionData = {
             type: 'SELL',
             symbol,
             name,
@@ -528,17 +542,28 @@ router.post("/buy", async (req, res) => {
             price,
             totalEarnings,
             date: admin.firestore.Timestamp.now(),
-        });
+        };
+
+        await clientTransactionsRef.add(transactionData);
+
+        // Add the sell transaction to the client's Orders subcollection
+        const clientOrdersRef = db
+            .collection('users')
+            .doc(userId)
+            .collection('Clients')
+            .doc(clientId)
+            .collection('Orders');
+
+        await clientOrdersRef.add(transactionData);
 
         // Update the client's portfolio
         if (currentStock.quantity === quantity) {
             // Remove the stock entirely if fully sold
             await clientPortfolioRef.delete();
         } else {
-            // Update the stock quantity and total cost
+            // Update the stock quantity
             await clientPortfolioRef.update({
                 quantity: admin.firestore.FieldValue.increment(-quantity),
-                totalCost: admin.firestore.FieldValue.increment(-totalEarnings),
             });
         }
 
@@ -563,6 +588,7 @@ router.post("/buy", async (req, res) => {
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 });
+
 
   
 
@@ -711,6 +737,102 @@ router.get('/alerts/:userId', async (req, res) => {
         res.status(500).json({ error: "Failed to fetch price alerts." });
     }
 });
+
+router.post('/sell', async (req, res) => {
+    const { userId, clientId, symbol, name, quantity, price, totalEarnings } = req.body;
+
+    if (!userId || !clientId || !symbol || !quantity || !price || !totalEarnings) {
+        return res.status(400).json({ error: 'Missing required fields.' });
+    }
+
+    const db = admin.firestore();
+
+    try {
+        // Reference to the client's portfolio
+        const clientPortfolioRef = db
+            .collection('users')
+            .doc(userId)
+            .collection('Clients')
+            .doc(clientId)
+            .collection('Portfolio')
+            .doc(symbol);
+
+        // Fetch the stock from the client's portfolio
+        const stockDoc = await clientPortfolioRef.get();
+        if (!stockDoc.exists) {
+            return res.status(404).json({ error: 'Stock not found in Portfolio.' });
+        }
+
+        const currentStock = stockDoc.data();
+
+        // Validate if the client has enough stock to sell
+        if (currentStock.quantity < quantity) {
+            return res.status(400).json({ error: 'Insufficient quantity to sell.' });
+        }
+
+        // Add a sell transaction to the client's Transactions subcollection
+        const clientTransactionsRef = db
+            .collection('users')
+            .doc(userId)
+            .collection('Clients')
+            .doc(clientId)
+            .collection('Transactions');
+
+        const transactionData = {
+            type: 'SELL',
+            symbol,
+            name,
+            quantity,
+            price,
+            totalEarnings,
+            date: admin.firestore.Timestamp.now(),
+        };
+
+        await clientTransactionsRef.add(transactionData);
+
+        // Add the sell transaction to the client's Orders subcollection
+        const clientOrdersRef = db
+            .collection('users')
+            .doc(userId)
+            .collection('Clients')
+            .doc(clientId)
+            .collection('Orders');
+
+        await clientOrdersRef.add(transactionData);
+
+        // Update the client's portfolio
+        if (currentStock.quantity === quantity) {
+            // Remove the stock entirely if fully sold
+            await clientPortfolioRef.delete();
+        } else {
+            // Update the stock quantity
+            await clientPortfolioRef.update({
+                quantity: admin.firestore.FieldValue.increment(-quantity),
+            });
+        }
+
+        // Update the client's balance
+        const clientRef = db.collection('users').doc(userId).collection('Clients').doc(clientId);
+        const clientDoc = await clientRef.get();
+
+        if (!clientDoc.exists) {
+            return res.status(404).json({ error: 'Client not found.' });
+        }
+
+        const clientData = clientDoc.data();
+        const updatedBalance = (clientData.balance || 0) + totalEarnings;
+
+        await clientRef.update({
+            balance: updatedBalance,
+        });
+
+        return res.json({ message: 'Stock sold successfully.', newBalance: updatedBalance });
+    } catch (error) {
+        console.error("Error processing sell transaction:", error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 
 
 // Delete a price alert
