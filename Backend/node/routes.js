@@ -755,7 +755,7 @@ router.get('/orders/:userId/:clientId', async (req, res) => {
             .doc(userId)
             .collection('Clients')
             .doc(clientId)
-            .collection('Orders');
+            .collection('Transactions');
 
         // Fetch all orders
         const snapshot = await ordersRef.orderBy('date', 'desc').get();
