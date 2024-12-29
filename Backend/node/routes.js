@@ -738,100 +738,44 @@ router.get('/alerts/:userId', async (req, res) => {
     }
 });
 
-router.post('/sell', async (req, res) => {
-    const { userId, clientId, symbol, name, quantity, price, totalEarnings } = req.body;
+router.get("/orders/:userId/:clientId", async (req, res) => {
+    const { userId, clientId } = req.params;
 
-    if (!userId || !clientId || !symbol || !quantity || !price || !totalEarnings) {
-        return res.status(400).json({ error: 'Missing required fields.' });
+    if (!userId || !clientId) {
+        return res.status(400).json({ error: "Missing userId or clientId." });
     }
 
     const db = admin.firestore();
 
     try {
-        // Reference to the client's portfolio
-        const clientPortfolioRef = db
-            .collection('users')
+        // Reference to the Transactions subcollection
+        const transactionsRef = db
+            .collection("users")
             .doc(userId)
-            .collection('Clients')
+            .collection("Clients")
             .doc(clientId)
-            .collection('Portfolio')
-            .doc(symbol);
+            .collection("Transactions");
 
-        // Fetch the stock from the client's portfolio
-        const stockDoc = await clientPortfolioRef.get();
-        if (!stockDoc.exists) {
-            return res.status(404).json({ error: 'Stock not found in Portfolio.' });
+        // Fetch all documents in the Transactions subcollection
+        const snapshot = await transactionsRef.orderBy("date", "desc").get();
+
+        if (snapshot.empty) {
+            return res.status(200).json({ orders: [] });
         }
 
-        const currentStock = stockDoc.data();
+        // Map the results to an array of objects
+        const orders = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
 
-        // Validate if the client has enough stock to sell
-        if (currentStock.quantity < quantity) {
-            return res.status(400).json({ error: 'Insufficient quantity to sell.' });
-        }
-
-        // Add a sell transaction to the client's Transactions subcollection
-        const clientTransactionsRef = db
-            .collection('users')
-            .doc(userId)
-            .collection('Clients')
-            .doc(clientId)
-            .collection('Transactions');
-
-        const transactionData = {
-            type: 'SELL',
-            symbol,
-            name,
-            quantity,
-            price,
-            totalEarnings,
-            date: admin.firestore.Timestamp.now(),
-        };
-
-        await clientTransactionsRef.add(transactionData);
-
-        // Add the sell transaction to the client's Orders subcollection
-        const clientOrdersRef = db
-            .collection('users')
-            .doc(userId)
-            .collection('Clients')
-            .doc(clientId)
-            .collection('Orders');
-
-        await clientOrdersRef.add(transactionData);
-
-        // Update the client's portfolio
-        if (currentStock.quantity === quantity) {
-            // Remove the stock entirely if fully sold
-            await clientPortfolioRef.delete();
-        } else {
-            // Update the stock quantity
-            await clientPortfolioRef.update({
-                quantity: admin.firestore.FieldValue.increment(-quantity),
-            });
-        }
-
-        // Update the client's balance
-        const clientRef = db.collection('users').doc(userId).collection('Clients').doc(clientId);
-        const clientDoc = await clientRef.get();
-
-        if (!clientDoc.exists) {
-            return res.status(404).json({ error: 'Client not found.' });
-        }
-
-        const clientData = clientDoc.data();
-        const updatedBalance = (clientData.balance || 0) + totalEarnings;
-
-        await clientRef.update({
-            balance: updatedBalance,
-        });
-
-        return res.json({ message: 'Stock sold successfully.', newBalance: updatedBalance });
+        return res.status(200).json({ orders });
     } catch (error) {
-        console.error("Error processing sell transaction:", error);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        console.error("Error fetching transactions:", error);
+        return res.status(500).json({ error: "Internal server error." });
     }
 });
+
 
 
 
