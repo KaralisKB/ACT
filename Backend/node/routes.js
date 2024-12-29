@@ -738,41 +738,44 @@ router.get('/alerts/:userId', async (req, res) => {
     }
 });
 
-router.get("/orders/:userId/:clientId", async (req, res) => {
+router.get('/orders/:userId/:clientId', async (req, res) => {
     const { userId, clientId } = req.params;
 
+    // Validate required parameters
     if (!userId || !clientId) {
-        return res.status(400).json({ error: "Missing userId or clientId." });
+        return res.status(400).json({ error: 'User ID and Client ID are required.' });
     }
 
     const db = admin.firestore();
 
     try {
-        // Reference to the Transactions subcollection
-        const transactionsRef = db
-            .collection("users")
+        // Reference to the Orders subcollection
+        const ordersRef = db
+            .collection('users')
             .doc(userId)
-            .collection("Clients")
+            .collection('Clients')
             .doc(clientId)
-            .collection("Transactions");
+            .collection('Orders');
 
-        // Fetch all documents in the Transactions subcollection
-        const snapshot = await transactionsRef.orderBy("date", "desc").get();
+        // Fetch all orders
+        const snapshot = await ordersRef.orderBy('date', 'desc').get();
 
+        // If no orders exist, return an empty array
         if (snapshot.empty) {
             return res.status(200).json({ orders: [] });
         }
 
-        // Map the results to an array of objects
+        // Map the snapshot documents to an array
         const orders = snapshot.docs.map((doc) => ({
-            id: doc.id,
+            id: doc.id, // Include document ID if needed
             ...doc.data(),
         }));
 
+        // Respond with the orders
         return res.status(200).json({ orders });
     } catch (error) {
-        console.error("Error fetching transactions:", error);
-        return res.status(500).json({ error: "Internal server error." });
+        console.error('Error fetching orders:', error);
+        return res.status(500).json({ error: 'Failed to fetch orders.' });
     }
 });
 
